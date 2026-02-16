@@ -1,0 +1,81 @@
+html,
+body {
+    height: 100%;
+    margin: 0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    padding: 24px;
+    background: rgb(244, 246, 225);
+    color: #111
+}
+
+#container {
+    max-width: 700px;
+    width: 100%;
+    background: rgb(244, 246, 225);
+    padding: 50px;
+    border-radius: 10px;
+}
+
+#text {
+    font-size: 20px;
+    line-height: 2;
+    white-space: pre-wrap
+}
+
+.char {
+    transition: transform 360ms cubic-bezier(.2, .8, .2, 1), filter 360ms ease, opacity 360ms ease;
+    will-change: transform, filter, opacity;
+    display: inline-block;
+}
+
+.masked {
+    display: inline-block;
+    width: 0.7ch;
+    height: 1.05em;
+    background: #000;
+    vertical-align: middle;
+    border-radius: 2px;
+    margin-right: 0.03em;
+}
+
+.controls {
+    display: flex;
+    gap: 12px;
+    align-items: center
+}
+
+button {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background: #fff;
+    cursor: pointer
+}
+
+#video {
+    width: 200px;
+    height: auto;
+    border-radius: 8px;
+    transform: scaleX(-1)
+}
+
+#status {
+    font-size: 14px;
+    color: #666
+}
+
+#blinkCount {
+    font-weight: 600
+}
+
+.muted {
+    opacity: 0.6;
+    font-size: 13px
+}

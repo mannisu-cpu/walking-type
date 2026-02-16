@@ -1,0 +1,19 @@
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    padding: 300px;
+    background: rgb(244, 246, 225);
+}
+
+button {
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: #f9f1a5;
+    cursor: pointer;
+    font-size: 32px;
+    color: #001eff;
+    border: 6px solid #001eff;
+
+}
