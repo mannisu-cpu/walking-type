@@ -6,3 +6,10 @@ body {
     padding: 300px;
     background: rgb(244, 246, 225);
 }
+
+@media (max-width: 600px) {
+    body {
+        padding: 24px;
+        gap: 12px;
+    }
+}

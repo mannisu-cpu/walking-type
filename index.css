@@ -7,6 +7,19 @@ body {
     background: rgb(244, 246, 225);
 }
 
+@media (max-width: 600px) {
+    body {
+        padding: 24px;
+        gap: 12px;
+    }
+
+    button {
+        font-size: 18px;
+        padding: 6px 10px;
+        border-width: 3px;
+    }
+}
+
 button {
     padding: 8px 12px;
     border-radius: 8px;

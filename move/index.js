@@ -2,21 +2,40 @@
 // Sample text to display; you can replace this with any text content
 const sampleText = `
 
-Saturday, February 14
-* Meet Me in Paris: A Clandestine Cabaret, Brooklyn
-* Rubulad’s for Lovers, Brooklyn
-* Besos, Bromas y Breakups, Manhattan
-* Valentine's Day Garbage and Rats in NYC Walking Tour, Manhattan
-* The Trash King: A Valentine's Day Spectacular, Manhattan
-* Verse4Verse, Queens
-* Draw-a-Clown, Brooklyn
-* Annual PALentine's Day Party, Queens
-* For Your Ears Only: Valentine's Day Dance Party, Brooklyn
-* Plus 1s Sketch Comedy Matinée, Manhattan
-* Str8 to DVD: Psychic Polycule, Brooklyn
-* Punk Rope, Manhattan
-* Live at the Inn! Valentine's Day Special, Manhattan
-* Smells Like Love, Manhattan
+
+Yale Alert
+WINTER SNOWSTORM - Yale Operations Update for Monday
+
+To: manni.su@yale.edu
+12:10 PM (12minutes ago)
+
+This is a Yale ALERT. Today is 02-22-2026 at 15:09. 
+
+To: Yale Community 
+
+Governor Ned Lamont has declared a state of emergency in Connecticut in advance of the major winter storm expected to impact the state beginning Sunday evening, February 22, 2026, and continuing throughout the day on Monday, February 23, 2026. In addition, he has issued an emergency order prohibiting all commercial vehicles from traveling on limited-access highways statewide beginning at 5:00 p.m. on Sunday and remaining in effect until further notice.
+
+As we continue to monitor conditions across the region and assess the potential impact on our campus community, we are writing to provide an update on Yale’s operations for Monday in light of the anticipated hazardous weather:
+
+- There will be no in-person instruction on Monday. All courses that can be held remotely should be moved to an online format. We ask that faculty communicate directly with their students regarding the status and expectations for their courses.
+
+- Yale shuttle service will be suspended until Tuesday morning at 6:00 a.m.
+
+- Only essential staff who have been directed by their managers to report to campus should do so.
+
+- Employees who are not essential should not come to campus. All employees should connect with their managers to confirm work arrangements. Those who are able to work remotely should do so.
+
+As an academic and residential campus, Yale must continue to support teaching, learning, research, and patient care while maintaining critical operations. Public safety, dining, facilities, and other essential services will remain in place, supported by teams across the university working together to keep campus operating safely. We are grateful to the many staff members whose dedication ensures continuity of operations during weather events. We are also grateful to the faculty for providing continuity of educational, research and clinical missions despite the weather disruption. 
+
+Please continue to monitor the Yale Status Board https://statusboard.apps.yale.edu/ for the most up-to-date information, including any changes to operations or transportation services.
+
+Thank you for your flexibility and cooperation.
+
+Best regards,
+Scott Strobel
+Provost and Henry Ford II Professor of Molecular Biophysics & Biochemistry
+Yale University
+
 
 
 `;
@@ -24,9 +43,13 @@ Saturday, February 14
 // Blink-detection + progressive masking implementation
 
 const videoEl = document.getElementById('video');
-const textEl = document.getElementById('text');
+let textEl = document.getElementById('text');
 const startBtn = document.getElementById('startBtn');
 const statusEl = document.getElementById('status');
+
+// Email interface state
+let emails = [];
+let currentEmailIndex = 0;
 
 let faceMesh = null;
 let camera = null;
@@ -70,22 +93,173 @@ const perpFlow = 0.9; // perpendicular flow multiplier
 // Prepare text as spans so individual characters can be masked
 let chars = [];
 function renderText() {
+    // Build a two-column Outlook-like UI inside #container
+    const container = document.getElementById('container');
+    container.innerHTML = '';
+
+    const left = document.createElement('div');
+    left.id = 'emailList';
+    left.style.width = '34%';
+    left.style.maxWidth = '280px';
+    left.style.overflowY = 'auto';
+    left.style.borderRight = '1px solid #ddd';
+    left.style.padding = '12px';
+
+    const right = document.createElement('div');
+    right.id = 'emailPane';
+    right.style.flex = '1';
+    right.style.padding = '18px';
+    right.style.overflow = 'auto';
+
+    container.style.display = 'flex';
+    container.style.gap = '0';
+    container.appendChild(left);
+    container.appendChild(right);
+
+    // create inner text area (keep id 'text' so rest of code can use it)
+    right.innerHTML = '<div id="text" style="font-size:12pt;line-height:16pt;"></div>';
+    // Re-acquire textEl reference because we replaced DOM
+    textEl = document.getElementById('text');
+
+    // Use a single Yale Alert email for the right column (explicit content)
+    const title = `Yale Alert\nWINTER SNOWSTORM - Yale Operations Update for Monday`;
+    const meta = `To: manni.su@yale.edu\n12:10 PM (12minutes ago)`;
+    const bodyMain = `\n\n
+\nGovernor Ned Lamont has declared a state of emergency in Connecticut in advance of the major winter storm expected to impact the state beginning Sunday evening, February 22, 2026, and continuing throughout the day on Monday, February 23, 2026. In addition, he has issued an emergency order prohibiting all commercial vehicles from traveling on limited-access highways statewide beginning at 5:00 p.m. on Sunday and remaining in effect until further notice.
+
+As we continue to monitor conditions across the region and assess the potential impact on our campus community, we are writing to provide an update on Yale’s operations for Monday in light of the anticipated hazardous weather:
+
+- There will be no in-person instruction on Monday. All courses that can be held remotely should be moved to an online format. We ask that faculty communicate directly with their students regarding the status and expectations for their courses.
+
+- Yale shuttle service will be suspended until Tuesday morning at 6:00 a.m.
+
+- Only essential staff who have been directed by their managers to report to campus should do so.
+
+- Employees who are not essential should not come to campus. All employees should connect with their managers to confirm work arrangements. Those who are able to work remotely should do so.
+
+As an academic and residential campus, Yale must continue to support teaching, learning, research, and patient care while maintaining critical operations. Public safety, dining, facilities, and other essential services will remain in place, supported by teams across the university working together to keep campus operating safely. We are grateful to the many staff members whose dedication ensures continuity of operations during weather events. We are also grateful to the faculty for providing continuity of educational, research and clinical missions despite the weather disruption. 
+
+Please continue to monitor the Yale Status Board https://statusboard.apps.yale.edu/ for the most up-to-date information, including any changes to operations or transportation services.
+
+Thank you for your flexibility and cooperation.
+
+Best regards,
+Scott Strobel
+Provost and Henry Ford II Professor of Molecular Biophysics & Biochemistry
+Yale University`;
+
+    const fullBody = `${title}\n\n${meta}\n\n${bodyMain}`;
+    // Additional emails: Ben Weathers (provided) + two placeholders
+    const benBody = `benjamin.weathers@yale.edu\nTo-gather Opening Reception | Friday, Feb 20 6-8PM\n\nTo: hongting.zhu@yale.edu, becca.cheng@yale.edu, xy.chen@yale.edu\n\nHi All,\n\nPlease join me in celebrating the opening of To-gather @ 32 Edgewood. Public Reception is tomorrow! Friday February 20 6-8pm.\n\nWarmly,\n\nBen Weathers he/him\nGallery + Exhibitions Manager / Yale School of Art\n\nTo-gather\nStudent-organized exhibition\nOpen to the Yale community: February 20 - March 2, 2026\n\nPublic reception: Friday, February 20th from 6-8PM\nOrigami Workshop by Sok Song: Friday, February 20th at 4:30 PM\nPanel Discussion: Monday, March 2nd from 6-7PM\n\nA collective identity rooted in community and conversation, To-Gather invites closeness and shared understanding while confronting misrepresentation and cultural misreadings. The exhibition approaches collective identity not as a fixed definition, but as an evolving space where differences coexist and resonate. Within the American landscape, Asian and Asian diaspora voices are often subject to misreading, misunderstanding, and misrepresentation; here, the artists reclaim the terms of visibility by assembling their individual practices into a larger chorus, one that resists erasure, stereotype, and simplification.\n\nParticipating artists are Alec Dai, Amy Fang, Amy Wang, Camille Gwise, David Jung, Grace Han, Hasti Kasraei, Heejae Kim, Hongting Zhu, Izza Alyssa, Jocelyn Tsui, Le Liu, Manni Su, Mi Chen, Mingge Zhong, Ningxin Yao, Philip Falino, Priscilla Young, Rebecca Cheng, Shagnik Chakraborty, Shellie Zhang, Sok Song, Su Ji Kim, Wenqing Zhai, Xiangyun Chen, Xin Tan, Xing Zhang, Yinan Lin, Young Cho, and Yuwei Tu.\n\nOrganized by Hongting Zhu, Graphic Design MFA '26, Rebecca Cheng, Graphic Design MFA '26, and Xiangyun Chen, Photography MFA '26.`;
+
+    const placeholder1 = `art.school@yale.edu\nAll-School Town Hall w/ Open Studios alum panel, Feb 25\n\nTo: yale-students@yale.edu\n\n`;
+
+    const placeholder2 = `dannika.avent@yale.edu\nCommunity Lunch @ 1:15pm - Edgewood\n\nTo: soa_staff_admin@mailman.yale.edu\nsoa_mfa_students@mailman.yale.edu\n`;
+
+    emails = [
+        { subject: title, snippet: bodyMain.slice(0, 120), body: fullBody },
+        { subject: 'To-gather Opening Reception | Friday, Feb 20 6-8PM', snippet: benBody.slice(0, 120), body: benBody },
+        { subject: 'All-School Town Hall w/ Open Studios alum panel, Feb 25', snippet: placeholder1.slice(0, 120), body: placeholder1 },
+        { subject: 'Community Lunch @ 1:15pm - Edgewood', snippet: placeholder2.slice(0, 120), body: placeholder2 }
+    ];
+
+    // render list
+    left.innerHTML = '';
+    emails.forEach((em, idx) => {
+        const item = document.createElement('div');
+        item.className = 'emailItem';
+        item.style.padding = '10px 8px';
+        item.style.borderBottom = '1px solid #f0f0f0';
+        item.style.cursor = 'pointer';
+        item.style.fontSize = '13px';
+        item.style.lineHeight = '1.2';
+        item.innerHTML = `<div style="font-weight:600;margin-bottom:6px">${em.subject}</div><div style="color:#666;font-size:12px">${em.snippet}</div>`;
+        item.addEventListener('click', () => {
+            currentEmailIndex = idx;
+            renderEmailContent(idx);
+            // highlight selection
+            Array.from(left.querySelectorAll('.emailItem')).forEach((el, i) => el.style.background = i === idx ? '#f5f7fb' : '');
+        });
+        left.appendChild(item);
+    });
+
+    // select first email by default
+    if (emails.length > 0) {
+        currentEmailIndex = 0;
+        // mark first item
+        const first = left.querySelector('.emailItem');
+        if (first) first.style.background = '#f5f7fb';
+        renderEmailContent(0);
+    } else {
+        textEl.textContent = sampleText;
+        requestAnimationFrame(initCharStates);
+    }
+}
+
+function renderEmailContent(index) {
+    const em = emails[index];
+    // Render structured email: title, metadata, then body (body kept as per-character spans)
+    const emailPane = document.getElementById('emailPane');
+    if (!emailPane) return;
+    emailPane.innerHTML = '';
+
+    const titleEl = document.createElement('div');
+    // Use first two header lines as the full title when available
+    const headerLines = (em.body || '').split('\n').map(l => l.trim()).filter(Boolean);
+    const titleText = headerLines.length >= 2 ? `${headerLines[0]}\n${headerLines[1]}` : (em.subject || 'No Subject');
+    titleEl.textContent = titleText;
+    titleEl.style.fontWeight = '500';
+    titleEl.style.fontSize = '14pt';
+    titleEl.style.color = 'rgb(0, 0, 0)';
+    titleEl.style.whiteSpace = 'pre-wrap';
+    titleEl.style.marginBottom = '8px';
+
+    const infoEl = document.createElement('div');
+    // show To: and time lines if available
+    const metaLines = headerLines; // already computed
+    let infoText = '';
+    if (metaLines.length >= 4) {
+        infoText = `${metaLines[2]}\n${metaLines[3]}`;
+    } else if (metaLines.length >= 3) {
+        infoText = `${metaLines[2]}`;
+    }
+    infoEl.textContent = infoText;
+    infoEl.style.color = '#666';
+    infoEl.style.fontSize = '11pt';
+    infoEl.style.whiteSpace = 'pre-wrap';
+    infoEl.style.marginBottom = '12px';
+
+    const bodyContainer = document.createElement('div');
+    bodyContainer.style.fontSize = '12pt';
+    bodyContainer.style.lineHeight = '16pt';
+    bodyContainer.style.whiteSpace = 'pre-wrap';
+    bodyContainer.id = 'text';
+
+    emailPane.appendChild(titleEl);
+    emailPane.appendChild(infoEl);
+    emailPane.appendChild(bodyContainer);
+
+    // Re-acquire textEl reference because we replaced DOM
+    textEl = document.getElementById('text');
+
+    // Prepare body-only content by removing the subject and metadata lines
+    // Find start of body: look for the first blank line after the header lines
+    const raw = em.body || '';
+    const parts = raw.split(/\n\s*\n/);
+    const bodyText = parts.slice(1).join('\n\n') || parts[0] || '';
+
+    // clear and render per-character spans for body
     textEl.innerHTML = '';
-    chars = sampleText.split('');
+    chars = bodyText.split('');
     chars.forEach((ch, i) => {
         const span = document.createElement('span');
         span.dataset.index = i;
         span.classList.add('char');
         span.textContent = ch;
-        if (ch === '\n') {
-            span.style.display = 'block';
-        }
-        if (ch.trim() === '') {
-            span.classList.add('whitespace');
-        }
+        if (ch === '\n') span.style.display = 'block';
+        if (ch.trim() === '') span.classList.add('whitespace');
         textEl.appendChild(span);
     });
-    // initialize measurement and state on next frame
     requestAnimationFrame(initCharStates);
 }
 

@@ -60,10 +60,7 @@ button {
 }
 
 #video {
-    width: 200px;
-    height: auto;
-    border-radius: 8px;
-    transform: scaleX(-1)
+    display: none;
 }
 
 #status {
@@ -78,4 +75,36 @@ button {
 .muted {
     opacity: 0.6;
     font-size: 13px
+}
+
+@media (max-width: 600px) {
+    #container {
+        padding: 12px;
+        max-width: 100%;
+        border-radius: 6px;
+    }
+
+    #text {
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    button {
+        font-size: 14px;
+        padding: 6px 10px;
+    }
+
+    #video {
+        width: 100px;
+        border-radius: 4px;
+    }
+
+    body {
+        gap: 10px;
+        padding: 8px;
+    }
+
+    .controls {
+        gap: 6px;
+    }
 }
