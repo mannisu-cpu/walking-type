@@ -51,11 +51,18 @@ body {
     align-items: center
 }
 
+/* Left-align h3 headings inside move page */
+h3 {
+    text-align: left;
+    text-justify: inter-word;
+    white-space: pre-wrap;
+}
+
 button {
     padding: 8px 12px;
     border-radius: 8px;
-    border: 1px solid #ddd;
-    background: #fff;
+    border: 1px solid #000000;
+    background: #dbdcdb;
     cursor: pointer
 }
 
