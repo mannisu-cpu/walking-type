@@ -34,7 +34,7 @@
             display: flex;
             align-items: center;
             gap: 20px;
-            background: rgba(0,0,0,0.25);
+            background: rgba(0, 0, 0, 0.25);
             padding: 6px 12px;
             border-radius: 6px;
         }
@@ -44,7 +44,7 @@
             font-family: 'MyCustomFont', serif;
             font-size: 20pt;
             margin: 0;
-            border: none;
+            border: 1px solid white;
             background: transparent;
             color: white;
             cursor: pointer;
@@ -103,7 +103,7 @@
             "imprint", "erase", "surface", "distance",
             "footprint", "step", "mark", "leave",
             "tread", "trace", "drift", "imprint",
-            "we", "The", "thinking", "generates", " rhythm", "of"
+            "we", "the", "thinking", "generates", " rhythm", "of"
         ];
 
         /* ---------------- DRAW ---------------- */
@@ -121,7 +121,7 @@
             ctx.stroke();
 
             ctx.fillStyle = "white";
-            ctx.font = "16px serif";
+            ctx.font = "16px MyCustomFont";
             ctx.textBaseline = "middle";
 
             path.forEach((p, i) => {
@@ -237,7 +237,15 @@
             draw();
             requestAnimationFrame(loop);
         }
-        loop();
+
+        // Wait for the custom font to load before starting the render loop
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(() => {
+                loop();
+            }).catch(() => loop());
+        } else {
+            loop();
+        }
     </script>
 
 </body>
