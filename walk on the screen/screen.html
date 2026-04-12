@@ -99,7 +99,7 @@
                     max="40" value="0" style="margin-left:8px"></label>
             <label style="display:flex;align-items:center">Compression: <input id="compress" type="range" min="50"
                     max="150" value="100" style="margin-left:8px"></label>
-            <label style="display:flex;align-items:center">Monochrome BG: <input id="monoBg" type="checkbox"
+            <label style="display:flex;align-items:center">Monochrome photo: <input id="monoBg" type="checkbox"
                     style="margin-left:8px"></label>
             <label style="display:flex;align-items:center">Mono color: <select id="monoColor" style="margin-left:8px">
                     <option value="A">Color A</option>
@@ -378,6 +378,56 @@
 
         setupControls();
 
+        // Transform the `h3` text into a trailing cursor tail composed of its characters.
+        (function setupCursorTail(){
+            const h3 = document.querySelector('h3');
+            if (!h3) return;
+            const raw = (h3.textContent || '').trim();
+            if (!raw) return;
+            // hide original heading
+            h3.style.visibility = 'hidden';
+
+            const tailText = raw.split('');
+            let tailIndex = 0;
+            let lastTime = 0;
+            const minInterval = 40; // ms between characters
+
+            function spawnCharAt(x,y){
+                const ch = tailText[tailIndex++ % tailText.length];
+                const span = document.createElement('span');
+                span.textContent = ch;
+                span.style.position = 'fixed';
+                span.style.left = x + 'px';
+                span.style.top = y + 'px';
+                span.style.transform = 'translate(-50%,-50%)';
+                span.style.pointerEvents = 'none';
+                span.style.fontFamily = "MyCustomFont, system-ui, Arial";
+                span.style.fontSize = Math.max(12, Math.round(fontSize * 0.9)) + 'px';
+                span.style.color = mixColor(colorA, colorB, mix * ((tailIndex % 10)/9));
+                span.style.opacity = '1';
+                span.style.transition = 'transform 850ms cubic-bezier(.22,1,.36,1), opacity 850ms linear';
+                document.body.appendChild(span);
+                // on next frame, push it upward and fade
+                requestAnimationFrame(()=>{
+                    span.style.transform = 'translate(-50%,-150%)';
+                    span.style.opacity = '0';
+                });
+                // cleanup
+                setTimeout(()=>{ try{ span.remove(); }catch(e){} }, 900);
+            }
+
+            function onPointerMove(e){
+                const now = performance.now();
+                if (now - lastTime < minInterval) return;
+                lastTime = now;
+                const x = e.clientX || (e.touches && e.touches[0] && e.touches[0].clientX) || 0;
+                const y = e.clientY || (e.touches && e.touches[0] && e.touches[0].clientY) || 0;
+                spawnCharAt(x,y);
+            }
+
+            // pointer events cover mouse and touch; keep passive:false to allow preventDefault elsewhere
+            window.addEventListener('pointermove', onPointerMove);
+        })();
         // keyboard shortcut: press 'a' to toggle (hide/show) the control bar by changing visibility
         function toggleControlBar() {
             const bar = document.getElementById('controlBar');
