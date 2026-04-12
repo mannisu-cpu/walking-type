@@ -34,7 +34,7 @@
             color: #f9f1a5;
             border-radius: 20px;
             text-decoration: none;
-            border: 2px solid #001eff
+            border: 3px solid #001eff
         }
     </style>
 </head>
@@ -139,7 +139,7 @@
         for (let i = 0; i < pathCount; i++) paths.push(generatePath(150));
 
         let frame = 0;
-        const framesPerPath = 240; // frames to draw one full path
+        const framesPerPath = 480; // frames to draw one full path (doubled to slow motion by half)
 
         // text pool (split into words) to replace some strokes
         const textPool = "Walking, ideally, is a state in which the mind, the body, and the world are aligned, as though they were three characters finally in conversation together, three notes suddenly making a chord. Walking allows us to be in our bodies and in the world without being made busy by them. It leaves us free to think without being wholly lost in our thoughts.".split(/\s+/).map(s => s.replace(/[.,]/g, ''));
@@ -167,10 +167,10 @@
             requestAnimationFrame(render);
         }
 
-        // regenerate paths occasionally to keep variation
+        // regenerate paths occasionally to keep variation (interval doubled to match slower motion)
         setInterval(() => {
             for (let i = 0; i < paths.length; i++) paths[i] = generatePath(150);
-        }, 12000);
+        }, 24000);
 
         render();
     </script>
