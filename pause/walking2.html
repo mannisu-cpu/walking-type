@@ -110,8 +110,10 @@
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            ctx.strokeStyle = "white";
+            ctx.strokeStyle = "yellow";
             ctx.lineWidth = 2;
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = "transparent";
 
             ctx.beginPath();
             path.forEach((p, i) => {
@@ -121,8 +123,10 @@
             ctx.stroke();
 
             ctx.fillStyle = "white";
-            ctx.font = "16px MyCustomFont";
+            ctx.font = "50px MyCustomFont";
             ctx.textBaseline = "middle";
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = "transparent";
 
             path.forEach((p, i) => {
                 if (!words[i]) return;
