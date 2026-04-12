@@ -50,9 +50,16 @@
             cursor: pointer;
         }
 
+        /* steps status style: use custom typeface at 12pt */
+        #status {
+            font-family: 'MyCustomFont', serif;
+            font-size: 12pt;
+            color: white;
+        }
+
         #text {
             font-family: 'MyCustomFont', serif;
-            font-size: 20pt;
+            font-size: 16pt;
             position: fixed;
             bottom: 10px;
             left: 10px;
@@ -123,7 +130,7 @@
             ctx.stroke();
 
             ctx.fillStyle = "white";
-            ctx.font = "50px MyCustomFont";
+            ctx.font = "30px MyCustomFont";
             ctx.textBaseline = "middle";
             ctx.shadowBlur = 0;
             ctx.shadowColor = "transparent";
