@@ -51,6 +51,16 @@
             border: 2px solid #fcfae9;
             text-decoration: none
         }
+
+        h3 {
+            position: fixed;
+            left: 12px;
+            top: 12px;
+            z-index: 1100;
+            font-family: 'MyCustomFont', sans-serif, ;
+            color: #111;
+            margin: 0;
+        }
     </style>
 </head>
 
@@ -58,16 +68,50 @@
     <canvas id="drawCanvas"></canvas>
     <div class="controls">
         <button id="clearBtn" class="btn">Clear</button>
+        <button id="saveJpgBtn" class="btn">Save JPG</button>
+    </div>
+
+    <div>
+        <h3> Use your finger or mouse as foot, trace the path on the screen.
+
+        </h3>
+    </div>
+
+    <!-- Control bar: color pickers and sliders to tune generated text path -->
+    <div id="controlBar"
+        style="position:fixed;left:12px;bottom:12px;right:12px;z-index:1100;background:rgba(255,255,255,0.94);border-radius:8px;padding:8px;box-shadow:0 6px 18px rgba(0,0,0,0.12);font-family:'MyCustomFont', system-ui, Arial;">
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <label>Color A: <input id="colorA" type="color" value="#111111"></label>
+            <label>Color B: <input id="colorB" type="color" value="#f9f1a5"></label>
+            <label style="display:flex;align-items:center">Mix: <input id="mix" type="range" min="0" max="100"
+                    value="50" style="margin-left:8px"></label>
+            <label style="display:flex;align-items:center">Font size: <input id="fontSize" type="range" min="10"
+                    max="48" value="18" style="margin-left:8px"></label>
+            <label style="display:flex;align-items:center">Rotation: <input id="rot" type="range" min="-90" max="90"
+                    value="0" style="margin-left:8px"></label>
+            <label style="display:flex;align-items:center">Char spacing: <input id="charSpacing" type="range" min="-10"
+                    max="40" value="0" style="margin-left:8px"></label>
+            <label style="display:flex;align-items:center">Compression: <input id="compress" type="range" min="50"
+                    max="150" value="100" style="margin-left:8px"></label>
+        </div>
     </div>
 
     <script>
         const canvas = document.getElementById('drawCanvas');
         const ctx = canvas.getContext('2d');
 
-        // configuration
-        const stepPx = 36; // distance between placed words
-        const fontSize = 18;
+        // configuration (some parameters are adjustable via control bar)
+        let stepPx = 36; // distance between placed words
+        let fontSize = 18;
         const fontFamily = 'MyCustomFont, system-ui, Arial';
+
+        // UI-controlled parameters
+        let colorA = '#111111';
+        let colorB = '#f9f1a5';
+        let mix = 0.5; // 0..1
+        let rotationOffset = 0; // degrees
+        let charSpacing = 0; // px between chars
+        let compression = 1; // horizontal scale (1 = normal)
 
         // text pool
         const textPool = "Walking, ideally, is a state in which the mind, the body, and the world are aligned, as though they were three characters finally in conversation together, three notes suddenly making a chord. Walking allows us to be in our bodies and in the world without being made busy by them. It leaves us free to think without being wholly lost in our thoughts.".split(/\s+/).map(s => s.replace(/[.,]/g, ''));
@@ -110,15 +154,44 @@
             const dx = a.x - b.x; const dy = a.y - b.y; return Math.sqrt(dx * dx + dy * dy);
         }
 
+        function hexToRgb(hex) {
+            const h = hex.replace('#', '');
+            return { r: parseInt(h.substring(0, 2), 16), g: parseInt(h.substring(2, 4), 16), b: parseInt(h.substring(4, 6), 16) };
+        }
+
+        function rgbToHex(r, g, b) {
+            const toHex = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+            return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+        }
+
+        function mixColor(a, b, t) {
+            const A = hexToRgb(a); const B = hexToRgb(b);
+            return rgbToHex(A.r * (1 - t) + B.r * t, A.g * (1 - t) + B.g * t, A.b * (1 - t) + B.b * t);
+        }
+
         function placeWordAt(p, angle) {
             const word = textPool[wordIndex % textPool.length];
+            const colorMix = mix * ((wordIndex % 10) / 9);
+            const fill = mixColor(colorA, colorB, colorMix);
             wordIndex++;
+
             ctx.save();
             ctx.translate(p.x, p.y);
-            ctx.rotate(angle);
-            ctx.fillStyle = '#111';
+            ctx.rotate(angle + (rotationOffset * Math.PI / 180));
+
+            // apply horizontal compression
+            ctx.scale(compression, 1);
+            ctx.fillStyle = fill;
             ctx.font = `${fontSize}px ${fontFamily}`;
-            ctx.fillText(word, 0, 0);
+
+            // draw characters individually with extra spacing
+            let x = 0;
+            for (let i = 0; i < word.length; i++) {
+                const ch = word[i];
+                const w = ctx.measureText(ch).width;
+                ctx.fillText(ch, x, 0);
+                x += w + charSpacing;
+            }
             ctx.restore();
         }
 
@@ -170,8 +243,55 @@
             wordIndex = 0; carry = 0; lastPoint = null;
         });
 
+        // save as JPG
+        document.getElementById('saveJpgBtn').addEventListener('click', () => {
+            const ratio = window.devicePixelRatio || 1;
+            const w = Math.floor(canvas.width / ratio);
+            const h = Math.floor(canvas.height / ratio);
+            const out = document.createElement('canvas');
+            out.width = w; out.height = h;
+            const octx = out.getContext('2d');
+            // fill background (match page background)
+            octx.fillStyle = window.getComputedStyle(document.body).backgroundColor || '#ffffff';
+            octx.fillRect(0, 0, w, h);
+            // draw the drawing canvas into output canvas
+            octx.drawImage(canvas, 0, 0, w, h);
+            const data = out.toDataURL('image/jpeg', 0.95);
+            const a = document.createElement('a');
+            a.href = data;
+            a.download = 'trace.jpg';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        });
+
         // optional: draw a faint guide stroke as user moves (uncomment if desired)
         // (kept minimal for text-first aesthetic)
+
+        // wire UI controls
+        function setupControls() {
+            const cA = document.getElementById('colorA');
+            const cB = document.getElementById('colorB');
+            const mixEl = document.getElementById('mix');
+            const fs = document.getElementById('fontSize');
+            const rot = document.getElementById('rot');
+            const cs = document.getElementById('charSpacing');
+            const comp = document.getElementById('compress');
+
+            // initialize
+            colorA = cA.value; colorB = cB.value; mix = mixEl.value / 100;
+            fontSize = parseInt(fs.value, 10); rotationOffset = parseInt(rot.value, 10); charSpacing = parseInt(cs.value, 10); compression = parseInt(comp.value, 10) / 100;
+
+            fs.addEventListener('input', () => { fontSize = parseInt(fs.value, 10); resizeCanvas(); });
+            rot.addEventListener('input', () => { rotationOffset = parseInt(rot.value, 10); });
+            cs.addEventListener('input', () => { charSpacing = parseInt(cs.value, 10); });
+            comp.addEventListener('input', () => { compression = parseInt(comp.value, 10) / 100; });
+            cA.addEventListener('input', () => { colorA = cA.value; });
+            cB.addEventListener('input', () => { colorB = cB.value; });
+            mixEl.addEventListener('input', () => { mix = mixEl.value / 100; });
+        }
+
+        setupControls();
 
     </script>
 </body>
