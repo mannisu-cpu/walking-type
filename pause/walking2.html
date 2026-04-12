@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <style>
+        @font-face {
+            font-family: 'MyCustomFont';
+            src: url('./fonts/ABCDiatypeVariable.ttf') format('opentype');
+        }
+
         body {
             margin: 0;
             background: black;
@@ -23,16 +28,31 @@
         #ui {
             position: fixed;
             top: 10px;
-            left: 10px;
+            left: 50%;
+            transform: translateX(-50%);
             z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: rgba(0,0,0,0.25);
+            padding: 6px 12px;
+            border-radius: 6px;
         }
 
-        button {
-            padding: 6px 10px;
-            margin-right: 5px;
+        #ui button {
+            padding: 6px 12px;
+            font-family: 'MyCustomFont', serif;
+            font-size: 20pt;
+            margin: 0;
+            border: none;
+            background: transparent;
+            color: white;
+            cursor: pointer;
         }
 
         #text {
+            font-family: 'MyCustomFont', serif;
+            font-size: 20pt;
             position: fixed;
             bottom: 10px;
             left: 10px;
@@ -41,7 +61,7 @@
             overflow: auto;
             font-size: 14px;
             line-height: 1.5;
-            opacity: 0.85;
+            opacity: 1;
         }
     </style>
 </head>
@@ -49,8 +69,8 @@
 <body>
 
     <div id="ui">
-        <button onclick="requestPermission()">Start</button>
-        <button onclick="replay()">Replay</button>
+        <button onclick="requestPermission()">GO</button>
+        <button onclick="replay()">Read My Path</button>
         <span id="status">waiting...</span>
     </div>
 
@@ -80,7 +100,10 @@
         const vocab = [
             "walk", "trace", "press", "knead",
             "memory", "ground", "layer", "drift",
-            "imprint", "erase", "surface", "distance"
+            "imprint", "erase", "surface", "distance",
+            "footprint", "step", "mark", "leave",
+            "tread", "trace", "drift", "imprint",
+            "we", "The", "thinking", "generates", " rhythm", "of"
         ];
 
         /* ---------------- DRAW ---------------- */
