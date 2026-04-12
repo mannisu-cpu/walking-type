@@ -114,8 +114,9 @@
             // draw words at intervals to replace some of the strokes (slower)
             if (progressIndex > 12 && textPool && textPool.length) {
                 const wordStep = Math.max(14, Math.floor(progressIndex / 10));
-                ctx.fillStyle = '#111';
-                ctx.font = '15px serif';
+                    ctx.fillStyle = '#111';
+                    ctx.font = '20px MyCustomFont';
+                ctx.fontfamily = 'MyCustomFont, sans serif';
                 ctx.textBaseline = 'middle';
                 const timeIndex = Math.floor(frame / textUpdateRate);
                 for (let i = 0; i <= progressIndex; i += wordStep) {
@@ -144,7 +145,7 @@
         // text pool (split into words) to replace some strokes
         const textPool = "Walking, ideally, is a state in which the mind, the body, and the world are aligned, as though they were three characters finally in conversation together, three notes suddenly making a chord. Walking allows us to be in our bodies and in the world without being made busy by them. It leaves us free to think without being wholly lost in our thoughts.".split(/\s+/).map(s => s.replace(/[.,]/g, ''));
         // controls text update speed: larger => slower
-        const textUpdateRate = 30;
+        const textUpdateRate = 50;
 
         function render() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -174,7 +175,16 @@
             for (let i = 0; i < paths.length; i++) paths[i] = generatePath(150);
         }, 24000);
 
-        render();
+        // wait for custom font to load before starting animation to ensure canvas uses it
+        function startRender() {
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(() => render()).catch(() => render());
+            } else {
+                render();
+            }
+        }
+
+        startRender();
     </script>
 
 </body>
