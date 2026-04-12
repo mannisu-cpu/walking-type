@@ -6,24 +6,177 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Walking as Reading</title>
     <link rel="stylesheet" href="index.css">
+    <style>
+        /* full-viewport background canvas */
+        #bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            display: block;
+            pointer-events: none;
+        }
+
+        .controls {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            margin-top: 24px;
+        }
+
+        .btn {
+            display: inline-block;
+            margin: 8px;
+            padding: 12px 18px;
+            background: #111;
+            color: #f9f1a5;
+            border-radius: 20px;
+            text-decoration: none;
+            border: 2px solid #001eff
+        }
+    </style>
 </head>
 
 <body>
 
-    <br>
+    <canvas id="bg"></canvas>
+
     <div class="controls">
-        <button id="startBtn">
-            <a href="move/move.html">Pause, for easy reading</a>
-            <button id="startBtn">
-                <a href="pause/walking2.html">Reading, on the move</a>
-            </button>
-
+        <a class="btn" href="move/move.html">Pause, for easy reading</a>
+        <a class="btn" href="pause/walking2.html">Reading, on the move</a>
     </div>
-    <br>
-    <br>
 
+    <script>
+        // Background looping pen-like path animation
+        const canvas = document.getElementById('bg');
+        const ctx = canvas.getContext('2d');
 
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
 
+        // generate a random smooth path across the canvas
+        function generatePath(segmentCount = 120) {
+            const pts = [];
+            let x = Math.random() * canvas.width;
+            let y = Math.random() * canvas.height;
+            pts.push({ x, y });
+            for (let i = 1; i < segmentCount; i++) {
+                const angle = (Math.random() - 0.5) * Math.PI * 0.6;
+                const dist = 20 + Math.random() * 40;
+                x += Math.cos(angle) * dist + (Math.random() - 0.5) * 30;
+                y += Math.sin(angle) * dist + (Math.random() - 0.5) * 30;
+                // wrap around edges
+                if (x < 0) x += canvas.width;
+                if (x > canvas.width) x -= canvas.width;
+                if (y < 0) y += canvas.height;
+                if (y > canvas.height) y -= canvas.height;
+                pts.push({ x, y });
+            }
+            return pts;
+        }
 
+        // draw a pen-like stroke for given subpath
+        function drawPenStroke(path, progressIndex, pathIndex) {
+            // draw multiple passes with slight offsets to simulate pen texture
+            for (let pass = 0; pass < 4; pass++) {
+                ctx.beginPath();
+                const jitter = (pass - 1.5) * 0.8;
+                for (let i = 0; i <= progressIndex; i++) {
+                    const p = path[i];
+                    const nx = p.x + (Math.random() - 0.5) * jitter;
+                    const ny = p.y + (Math.random() - 0.5) * jitter;
+                    if (i === 0) ctx.moveTo(nx, ny);
+                    else ctx.lineTo(nx, ny);
+                }
+                ctx.lineWidth = 1.2 + pass * 0.6;
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = 'rgba(20,20,20,' + (0.25 + pass * 0.15) + ')';
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.stroke();
+            }
+            // add a darker single stroke on top for crispness
+            ctx.beginPath();
+            for (let i = 0; i <= progressIndex; i++) {
+                const p = path[i];
+                if (i === 0) ctx.moveTo(p.x, p.y);
+                else ctx.lineTo(p.x, p.y);
+            }
+            ctx.lineWidth = 1.0;
+            ctx.strokeStyle = '#111';
+            ctx.stroke();
+
+            // draw words at intervals to replace some of the strokes
+            if (progressIndex > 8 && textPool && textPool.length) {
+                const wordStep = Math.max(6, Math.floor(progressIndex / 8));
+                ctx.fillStyle = '#111';
+                ctx.font = '14px serif';
+                ctx.textBaseline = 'middle';
+                for (let i = 0; i <= progressIndex; i += wordStep) {
+                    const p = path[i];
+                    const next = path[Math.min(i + 1, path.length - 1)];
+                    if (!p || !next) continue;
+                    const w = textPool[(i + pathIndex + frame) % textPool.length];
+                    const angle = Math.atan2(next.y - p.y, next.x - p.x);
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(angle);
+                    ctx.fillText(w, 0, 0);
+                    ctx.restore();
+                }
+            }
+        }
+
+        // create a set of paths and animate them in a loop
+        const paths = [];
+        const pathCount = 3;
+        for (let i = 0; i < pathCount; i++) paths.push(generatePath(150));
+
+        let frame = 0;
+        const framesPerPath = 240; // frames to draw one full path
+
+        // text pool (split into words) to replace some strokes
+        const textPool = "Walking, ideally, is a state in which the mind, the body, and the world are aligned, as though they were three characters finally in conversation together, three notes suddenly making a chord. Walking allows us to be in our bodies and in the world without being made busy by them. It leaves us free to think without being wholly lost in our thoughts.".split(/\s+/).map(s => s.replace(/[.,]/g, ''));
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // background subtle paper texture
+            ctx.fillStyle = '#f7f6ef';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // draw each path at an offset time so they looped staggered
+            for (let k = 0; k < paths.length; k++) {
+                const path = paths[k];
+                // compute progress index for this path
+                const t = ((frame + k * Math.floor(framesPerPath / paths.length)) % framesPerPath) / framesPerPath;
+                const idx = Math.floor(t * (path.length - 1));
+                // fade older strokes
+                ctx.save();
+                ctx.globalAlpha = 0.85 - k * 0.18;
+                drawPenStroke(path, idx, k);
+                ctx.restore();
+            }
+
+            frame = (frame + 1) % framesPerPath;
+            requestAnimationFrame(render);
+        }
+
+        // regenerate paths occasionally to keep variation
+        setInterval(() => {
+            for (let i = 0; i < paths.length; i++) paths[i] = generatePath(150);
+        }, 12000);
+
+        render();
+    </script>
+
+</body>
+
+</html>
 
 </html>
