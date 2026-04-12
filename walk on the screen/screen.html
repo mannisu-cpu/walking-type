@@ -317,23 +317,16 @@
 
         setupControls();
 
-        // keyboard shortcut: press 'a' to toggle (hide/show) the control bar
+        // keyboard shortcut: press 'a' to toggle (hide/show) the control bar by changing visibility
         function toggleControlBar() {
             const bar = document.getElementById('controlBar');
             if (!bar) return;
-            const m = window.getComputedStyle(bar).transform;
-            let current = 0;
-            if (m && m !== 'none') {
-                const vals = m.match(/matrix\(([^)]+)\)/);
-                if (vals) current = parseFloat(vals[1].split(',')[5]) || 0;
-            }
-            const maxHide = Math.max(0, bar.offsetHeight - 36);
-            if (current > 1) {
-                bar.style.transition = 'transform 220ms ease';
-                bar.style.transform = 'translateY(0px)';
+            // if currently hidden via display:none, show it; otherwise hide
+            const isHidden = window.getComputedStyle(bar).display === 'none';
+            if (isHidden) {
+                bar.style.display = '';
             } else {
-                bar.style.transition = 'transform 220ms ease';
-                bar.style.transform = `translateY(${maxHide}px)`;
+                bar.style.display = 'none';
             }
         }
 
