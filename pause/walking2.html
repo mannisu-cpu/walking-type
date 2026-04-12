@@ -42,9 +42,10 @@
         #ui button {
             padding: 6px 12px;
             font-family: 'MyCustomFont', serif;
-            font-size: 20pt;
+            font-size: 16pt;
             margin: 0;
             border: 1px solid white;
+            border-radius: 20px;
             background: transparent;
             color: white;
             cursor: pointer;
@@ -78,7 +79,8 @@
     <div id="ui">
         <button onclick="requestPermission()">GO</button>
         <button onclick="replay()">Read My Path</button>
-        <button onclick="savePath()">Save JPG</button>
+        <button id="gpsBtn" onclick="toggleGPS()">Use GPS</button>
+        <button onclick="savePath()">Save My Path</button>
         <span id="status">waiting...</span>
     </div>
 
@@ -267,6 +269,77 @@
             document.body.appendChild(a);
             a.click();
             a.remove();
+        }
+        /* ---------------- GPS TRACKING ---------------- */
+        let gpsWatchId = null;
+        let originLat = null;
+        let originLon = null;
+        const gpsScale = 2; // pixels per meter (adjust for zoom)
+
+        function latLonDeltaMeters(lat1, lon1, lat2, lon2) {
+            // approximate local east/north meter offsets from (lat1,lon1) to (lat2,lon2)
+            const R = 6378137; // earth radius in meters
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const meanLat = (lat1 + lat2) / 2 * Math.PI / 180;
+            const dy = dLat * R; // north
+            const dx = dLon * R * Math.cos(meanLat); // east
+            return { x: dx, y: dy };
+        }
+
+        function startGPS() {
+            if (!navigator.geolocation) {
+                alert('Geolocation not supported by this browser.');
+                return;
+            }
+            // reset origin and path so GPS path is clear
+            originLat = null;
+            originLon = null;
+            path = [];
+            words = [];
+
+            gpsWatchId = navigator.geolocation.watchPosition(
+                position => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+
+                    if (originLat === null) {
+                        originLat = lat;
+                        originLon = lon;
+                    }
+
+                    const meters = latLonDeltaMeters(originLat, originLon, lat, lon);
+                    // convert meters to canvas px, center at canvas center
+                    const px = canvas.width / 2 + meters.x * gpsScale;
+                    const py = canvas.height / 2 - meters.y * gpsScale; // y downwards
+
+                    const newPoint = { x: px, y: py };
+                    path.push(newPoint);
+
+                    document.getElementById('status').innerText =
+                        `GPS: ${lat.toFixed(5)}, ${lon.toFixed(5)}  points:${path.length}`;
+                },
+                err => {
+                    console.warn('geolocation error', err);
+                    document.getElementById('status').innerText = 'GPS error: ' + (err.message || err.code);
+                },
+                { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+            );
+
+            document.getElementById('gpsBtn').innerText = 'Stop GPS';
+        }
+
+        function stopGPS() {
+            if (gpsWatchId !== null) {
+                navigator.geolocation.clearWatch(gpsWatchId);
+                gpsWatchId = null;
+            }
+            document.getElementById('gpsBtn').innerText = 'Use GPS';
+        }
+
+        function toggleGPS() {
+            if (gpsWatchId) stopGPS();
+            else startGPS();
         }
 
         /* ---------------- LOOP ---------------- */
