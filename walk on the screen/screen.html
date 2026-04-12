@@ -46,7 +46,7 @@
         .btn {
             background: #111;
             color: #f9f1a5;
-            top: 24px;
+            top: 50px;
             padding: 8px 12px;
             border-radius: 14px;
             border: none;
@@ -56,9 +56,10 @@
         h3 {
             position: fixed;
             left: 12px;
-            bottom: 80px;
+            top: 50px;
             z-index: 1100;
             font-family: 'MyCustomFont', sans-serif, ;
+            font-size: 12pt;
             color: #111;
             margin: 0;
         }
@@ -98,6 +99,12 @@
                     max="40" value="0" style="margin-left:8px"></label>
             <label style="display:flex;align-items:center">Compression: <input id="compress" type="range" min="50"
                     max="150" value="100" style="margin-left:8px"></label>
+            <label style="display:flex;align-items:center">Monochrome BG: <input id="monoBg" type="checkbox"
+                    style="margin-left:8px"></label>
+            <label style="display:flex;align-items:center">Mono color: <select id="monoColor" style="margin-left:8px">
+                    <option value="A">Color A</option>
+                    <option value="B">Color B</option>
+                </select></label>
         </div>
     </div>
 
@@ -278,13 +285,66 @@
         document.body.appendChild(fileInput);
 
         uploadBtn.addEventListener('click', () => fileInput.click());
+        let originalBgImage = null; // store original uploaded Image object
+
+        function processAndSetBg(img) {
+            const mono = document.getElementById('monoBg');
+            const monoSel = document.getElementById('monoColor');
+            if (!mono || !mono.checked) {
+                // show original
+                bgImgEl.src = img.src; bgImgEl.style.display = 'block';
+                return;
+            }
+            // choose color A or B
+            const colorChoice = monoSel ? monoSel.value : 'A';
+            const tintHex = (colorChoice === 'A') ? colorA : colorB;
+            // draw to offscreen canvas and tint
+            const off = document.createElement('canvas');
+            off.width = img.naturalWidth || img.width;
+            off.height = img.naturalHeight || img.height;
+            const octx = off.getContext('2d');
+            octx.drawImage(img, 0, 0, off.width, off.height);
+            try {
+                const id = octx.getImageData(0, 0, off.width, off.height);
+                const d = id.data;
+                const tint = hexToRgb(tintHex);
+                for (let i = 0; i < d.length; i += 4) {
+                    const r = d[i], g = d[i + 1], b = d[i + 2];
+                    const L = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                    // map white -> color by luminance
+                    d[i] = Math.round(255 * (1 - L) + tint.r * L);
+                    d[i + 1] = Math.round(255 * (1 - L) + tint.g * L);
+                    d[i + 2] = Math.round(255 * (1 - L) + tint.b * L);
+                }
+                octx.putImageData(id, 0, 0);
+                bgImgEl.src = off.toDataURL('image/jpeg', 0.95);
+                bgImgEl.style.display = 'block';
+            } catch (err) {
+                // security error (CORS) or other; fallback to using original
+                console.warn('Could not process image for monochrome:', err);
+                bgImgEl.src = img.src; bgImgEl.style.display = 'block';
+            }
+        }
+
         fileInput.addEventListener('change', (ev) => {
             const f = ev.target.files && ev.target.files[0];
             if (!f) return;
             const url = URL.createObjectURL(f);
-            bgImgEl.src = url; bgImgEl.style.display = 'block';
-            // revoke URL later when image loads
-            bgImgEl.onload = () => { try { URL.revokeObjectURL(url); } catch (e) { } };
+            const img = new Image();
+            img.onload = () => {
+                originalBgImage = img;
+                processAndSetBg(img);
+                try { URL.revokeObjectURL(url); } catch (e) { }
+            };
+            img.src = url;
+        });
+
+        // reprocess when mono controls change
+        document.addEventListener('input', (e) => {
+            if (!originalBgImage) return;
+            if (e.target && (e.target.id === 'monoBg' || e.target.id === 'monoColor' || e.target.id === 'colorA' || e.target.id === 'colorB')) {
+                processAndSetBg(originalBgImage);
+            }
         });
 
         // ensure background image stays visible on resize (img uses object-fit:cover)
