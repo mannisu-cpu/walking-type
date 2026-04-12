@@ -1,12 +1,17 @@
+@font-face {
+    font-family: 'MyCustomFont';
+    src: url('./fonts/ABCDiatypeVariable.ttf') format('opentype');
+}
+
 body {
     display: flex;
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: 'MyCustomFont', serif;
     font-size: 16pt;
     flex-direction: column;
     align-items: center;
     gap: 18px;
     padding: 300px;
-    background: rgb(244, 246, 225);
+    background: rgb(0, 0, 0);
 }
 
 @media (max-width: 600px) {
@@ -30,11 +35,6 @@ button {
     font-size: 32px;
     color: #001eff;
     border: 6px solid #001eff;
+    border-radius: 50px;
 
-}
-
-/* Ensure h3 headings align to the left and use inter-word justification where supported */
-h3 {
-    text-align: left;
-    text-justify: inter-word;
 }

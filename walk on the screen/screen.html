@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Trace with Words</title>
+    <style>
+        @font-face {
+            font-family: 'MyCustomFont';
+            src: url('./fonts/ABCDiatypeVariable.ttf') format('opentype');
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0
+        }
+
+        body {
+            font-family: 'MyCustomFont', serif;
+            background: #fcfae9;
+            color: #111;
+        }
+
+        /* full-screen drawing canvas */
+        #drawCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            touch-action: none;
+            /* prevent default scrolling while drawing */
+            -ms-touch-action: none;
+        }
+
+        .controls {
+            position: fixed;
+            right: 12px;
+            top: 12px;
+            z-index: 1100
+        }
+
+        .btn {
+            background: #111;
+            color: #f9f1a5;
+            padding: 8px 12px;
+            border-radius: 14px;
+            border: 2px solid #fcfae9;
+            text-decoration: none
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="drawCanvas"></canvas>
+    <div class="controls">
+        <button id="clearBtn" class="btn">Clear</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('drawCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // configuration
+        const stepPx = 36; // distance between placed words
+        const fontSize = 18;
+        const fontFamily = 'MyCustomFont, system-ui, Arial';
+
+        // text pool
+        const textPool = "Walking, ideally, is a state in which the mind, the body, and the world are aligned, as though they were three characters finally in conversation together, three notes suddenly making a chord. Walking allows us to be in our bodies and in the world without being made busy by them. It leaves us free to think without being wholly lost in our thoughts.".split(/\s+/).map(s => s.replace(/[.,]/g, ''));
+
+        // drawing state
+        let isDrawing = false;
+        let lastPoint = null;
+        let carry = 0; // leftover distance toward next word placement
+        let wordIndex = 0;
+
+        function resizeCanvas() {
+            const ratio = window.devicePixelRatio || 1;
+            canvas.width = Math.floor(window.innerWidth * ratio);
+            canvas.height = Math.floor(window.innerHeight * ratio);
+            canvas.style.width = window.innerWidth + 'px';
+            canvas.style.height = window.innerHeight + 'px';
+            ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.font = `${fontSize}px ${fontFamily}`;
+            ctx.textBaseline = 'middle';
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function getEventPos(e) {
+            let clientX, clientY;
+            if (e.touches && e.touches.length) {
+                clientX = e.touches[0].clientX; clientY = e.touches[0].clientY;
+            } else if (e.changedTouches && e.changedTouches.length) {
+                clientX = e.changedTouches[0].clientX; clientY = e.changedTouches[0].clientY;
+            } else {
+                clientX = e.clientX; clientY = e.clientY;
+            }
+            return { x: clientX, y: clientY };
+        }
+
+        function dist(a, b) {
+            const dx = a.x - b.x; const dy = a.y - b.y; return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function placeWordAt(p, angle) {
+            const word = textPool[wordIndex % textPool.length];
+            wordIndex++;
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(angle);
+            ctx.fillStyle = '#111';
+            ctx.font = `${fontSize}px ${fontFamily}`;
+            ctx.fillText(word, 0, 0);
+            ctx.restore();
+        }
+
+        function appendPoint(p) {
+            if (!lastPoint) { lastPoint = p; return; }
+            let segStart = lastPoint;
+            let remaining = dist(segStart, p);
+            if (remaining <= 0) { lastPoint = p; return; }
+
+            // unit vector
+            const dx = (p.x - segStart.x) / remaining;
+            const dy = (p.y - segStart.y) / remaining;
+
+            let traveled = carry;
+            while (traveled + stepPx <= remaining + 1e-6) {
+                traveled += stepPx;
+                const nx = segStart.x + dx * traveled;
+                const ny = segStart.y + dy * traveled;
+                const point = { x: nx, y: ny };
+                const angle = Math.atan2(dy, dx);
+                placeWordAt(point, angle);
+            }
+            carry = Math.max(0, (traveled + 0) - remaining);
+            lastPoint = p;
+        }
+
+        function startDraw(p) {
+            isDrawing = true; lastPoint = p; carry = 0;
+        }
+
+        function endDraw() {
+            isDrawing = false; lastPoint = null; carry = 0;
+        }
+
+        // event handlers
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(getEventPos(e)); }, { passive: false });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); if (!isDrawing) startDraw(getEventPos(e)); appendPoint(getEventPos(e)); }, { passive: false });
+        canvas.addEventListener('touchend', (e) => { e.preventDefault(); endDraw(); }, { passive: false });
+
+        canvas.addEventListener('mousedown', (e) => { e.preventDefault(); startDraw(getEventPos(e)); });
+        window.addEventListener('mousemove', (e) => { if (!isDrawing) return; appendPoint(getEventPos(e)); });
+        window.addEventListener('mouseup', (e) => { if (!isDrawing) return; endDraw(); });
+
+        // clear button
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            // clear canvas content
+            const ratio = window.devicePixelRatio || 1;
+            ctx.clearRect(0, 0, canvas.width / ratio, canvas.height / ratio);
+            wordIndex = 0; carry = 0; lastPoint = null;
+        });
+
+        // optional: draw a faint guide stroke as user moves (uncomment if desired)
+        // (kept minimal for text-first aesthetic)
+
+    </script>
+</body>
+
+</html>

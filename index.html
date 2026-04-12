@@ -9,10 +9,11 @@
     <style>
         /* full-viewport background canvas */
         #bg {
-            position: absolute; /* span the full document so animation extends while scrolling */
+            position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
+            width: 100vw;
+            height: 100vh;
             z-index: -1;
             display: block;
             pointer-events: none;
@@ -44,8 +45,9 @@
     <canvas id="bg"></canvas>
 
     <div class="controls">
-        <a class="btn" href="move/move.html">Pause, for easy reading</a>
-        <a class="btn" href="pause/walking2.html">Reading, on the move</a>
+        <a class="btn" href="move/move.html">Walking while reading</a>
+        <a class="btn" href="pause/walking2.html">Writing on the move</a>
+        <a class="btn" href="walk on the screen/screen.html">Walking on the screen</a>
     </div>
 
     <script>
@@ -54,23 +56,10 @@
         const ctx = canvas.getContext('2d');
 
         function resize() {
-            // make canvas span the full document height so animation continues below the fold
             canvas.width = window.innerWidth;
-            const docHeight = Math.max(document.documentElement.scrollHeight, window.innerHeight);
-            canvas.height = docHeight;
-
-            // regenerate paths to use new dimensions
-            for (let i = 0; i < paths.length; i++) paths[i] = generatePath(150);
+            canvas.height = window.innerHeight;
         }
-
         window.addEventListener('resize', resize);
-        window.addEventListener('scroll', () => {
-            // if document height changed due to content/scroll, update canvas size
-            const docHeight = Math.max(document.documentElement.scrollHeight, window.innerHeight);
-            if (canvas.height !== docHeight) resize();
-        });
-
-        // initial sizing
         resize();
 
         // generate a random smooth path across the canvas
