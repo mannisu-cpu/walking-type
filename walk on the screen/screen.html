@@ -317,6 +317,33 @@
 
         setupControls();
 
+        // keyboard shortcut: press 'a' to toggle (hide/show) the control bar
+        function toggleControlBar() {
+            const bar = document.getElementById('controlBar');
+            if (!bar) return;
+            const m = window.getComputedStyle(bar).transform;
+            let current = 0;
+            if (m && m !== 'none') {
+                const vals = m.match(/matrix\(([^)]+)\)/);
+                if (vals) current = parseFloat(vals[1].split(',')[5]) || 0;
+            }
+            const maxHide = Math.max(0, bar.offsetHeight - 36);
+            if (current > 1) {
+                bar.style.transition = 'transform 220ms ease';
+                bar.style.transform = 'translateY(0px)';
+            } else {
+                bar.style.transition = 'transform 220ms ease';
+                bar.style.transform = `translateY(${maxHide}px)`;
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'a' || e.key === 'A') {
+                const tag = (e.target && e.target.tagName) || '';
+                if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+                toggleControlBar();
+            }
+        });
         // make control bar vertically draggable on mobile: drag down to hide
         (function makeControlBarDraggable() {
             const bar = document.getElementById('controlBar');
