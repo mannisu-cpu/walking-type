@@ -383,6 +383,32 @@
 
         setupControls();
 
+        // create a rasterized cursor from images/foot.svg sized to `size` px
+        function setCustomCursor(size = 32) {
+            const img = new Image();
+            img.onload = () => {
+                const c = document.createElement('canvas');
+                c.width = size; c.height = size;
+                const cx = c.getContext('2d');
+                cx.clearRect(0,0,size,size);
+                // draw svg into canvas scaled to fit
+                try {
+                    cx.drawImage(img, 0, 0, size, size);
+                    const data = c.toDataURL('image/png');
+                    const hotspot = Math.floor(size/2);
+                    const cursor = `url(${data}) ${hotspot} ${hotspot}, auto`;
+                    document.body.style.cursor = cursor;
+                    canvas.style.cursor = cursor;
+                } catch (err) {
+                    console.warn('Could not rasterize cursor:', err);
+                }
+            };
+            img.onerror = (e) => console.warn('Failed to load cursor image', e);
+            img.src = '../images/foot.svg';
+        }
+
+        // try to set cursor at a standard size; call again if user wants different size
+        setCustomCursor(32);
         // Transform the `h3` text into a trailing cursor tail composed of its characters.
         (function setupCursorTail(){
             const h3 = document.querySelector('h3');
