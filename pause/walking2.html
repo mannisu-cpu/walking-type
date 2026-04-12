@@ -78,6 +78,7 @@
     <div id="ui">
         <button onclick="requestPermission()">GO</button>
         <button onclick="replay()">Read My Path</button>
+        <button onclick="savePath()">Save JPG</button>
         <span id="status">waiting...</span>
     </div>
 
@@ -241,6 +242,31 @@
 
             document.getElementById("text").innerText =
                 "REPLAY TEXT:\n\n" + text;
+        }
+
+        // Export current canvas as a JPEG and trigger download
+        function savePath() {
+            // create an export canvas to ensure a solid black background for JPEG
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = canvas.width;
+            exportCanvas.height = canvas.height;
+            const ectx = exportCanvas.getContext('2d');
+
+            // fill background black
+            ectx.fillStyle = 'black';
+            ectx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+            // draw current canvas on top
+            ectx.drawImage(canvas, 0, 0);
+
+            // get JPEG data and download
+            const data = exportCanvas.toDataURL('image/jpeg', 0.92);
+            const a = document.createElement('a');
+            a.href = data;
+            a.download = `walking-path-${Date.now()}.jpg`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
         }
 
         /* ---------------- LOOP ---------------- */
