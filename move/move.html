@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en">
 
+
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -8,14 +10,18 @@
     <link rel="stylesheet" href="style.css">
 </head>
 
+
+
 <body>
-    <div class="controls">
-        <button id="startBtn">Reading Now</button>
-        <div id="status" class="muted">Stop Reading</div>
-    </div>
+
+    <input id="urlInput" placeholder="Enter URL, Start reading" />
+    <button id="loadBtn">Read</button>
+
+    <div id="text" style="white-space: pre-wrap;"></div>
+
 
     <div id="container">
-        <div id="text"></div>
+        <div id="text" lang="en"> </div>
     </div>
 
     <video id="video" autoplay playsinline muted></video>

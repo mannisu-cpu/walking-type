@@ -1,32 +1,92 @@
+@font-face {
+    font-family: 'MyCustomFont';
+    src: url('./font/Trueholder.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+}
+
 html,
+
+
 body {
     height: 100%;
     margin: 0;
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial
-}
-
-body {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 18px;
     padding: 24px;
-    background: rgb(244, 246, 225);
+    background: rgb(0, 0, 0);
     color: #111
 }
 
-#container {
-    max-width: 700px;
-    width: 100%;
-    background: rgb(244, 246, 225);
-    padding: 50px;
-    border-radius: 10px;
+#urlBar {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999;
+
+    background-color: rgb(0, 0, 0);
+    padding-top: 40px;
+    padding-bottom: 20px;
+    border: none;
+    border-radius: 20px;
 }
 
+#urlInput {
+    width: 300px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 15px;
+    border: none;
+    border-radius: 20px;
+    outline: none;
+    color: rgb(0, 243, 251);
+    font-size: 12pt;
+}
+
+#loadBtn {
+    padding: 10px 20px 10px 20px;
+    cursor: pointer;
+    background-color: rgb(0, 243, 251);
+    color: #ffffff;
+    border-radius: 30px;
+}
+
+
+
 #text {
-    font-size: 20px;
-    line-height: 2;
-    white-space: pre-wrap
+    font-family: 'MyCustomFont';
+    src: url('./font/Trueholder.otf') format('opentype');
+    font-weight: light;
+    font-style: normal;
+    font-size: 25px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    letter-spacing: 0.8px;
+    word-spacing: 4px;
+    padding-top: 100px;
+    padding-left: 300px;
+    padding-right: 300px;
+
+    hyphens: auto;
+    word-break: normal;
+    overflow-wrap: break-word;
+    color: #fffcfc;
+}
+
+.leading-space {
+    display: inline-block;
+    width: 0.5em;
+    /* 控制缩进大小 */
+}
+
+.first-char {
+    font-weight: bold;
+    font-size: 1.2em;
+    /* 放大首字母 */
+    margin-right: 0.05em;
 }
 
 .char {
@@ -35,14 +95,42 @@ body {
     display: inline-block;
 }
 
+.word {
+    display: inline-block;
+    white-space: nowrap;
+    /* 防止单词内部断行 */
+}
+
+.whitespace {
+    white-space: pre;
+}
+
 .masked {
     display: inline-block;
     width: 0.7ch;
     height: 1.05em;
-    background: #000;
+    background: none;
+    color: rgb(0, 255, 234);
+    animation: flicker 0.5s infinite;
     vertical-align: middle;
     border-radius: 2px;
     margin-right: 0.03em;
+
+}
+
+@keyframes flicker {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+
+    100% {
+        opacity: 1;
+    }
+
 }
 
 .controls {
@@ -56,15 +144,22 @@ h3 {
     text-align: left;
     text-justify: inter-word;
     white-space: pre-wrap;
+    font-family: 'MyCustomFont';
+    src: url('./font/TrueSansRegular.otf') format('opentype');
 }
 
 button {
+    font-family: 'MyCustomFont';
+    src: url('./font/TrueSansRegular.otf') format('opentype');
+    font-size: 16pt;
     padding: 8px 12px;
-    border-radius: 8px;
-    border: 1px solid #000000;
+    border-radius: 4px;
+    border: none;
     background: #dbdcdb;
     cursor: pointer
 }
+
+
 
 #video {
     display: none;

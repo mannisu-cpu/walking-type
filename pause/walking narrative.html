@@ -8,11 +8,16 @@
     <link rel="stylesheet" href="pause.css">
 
     <style>
+        @font-face {
+            font-family: 'MyCustomFont';
+            src: url('./fonts/ABCDiatypeVariable.ttf') format('opentype');
+        }
+
         body {
             margin: 0;
             background: black;
             color: white;
-            font-family: serif;
+            font-family: 'MyCustomFont', serif;
             overflow: hidden;
         }
 
@@ -41,6 +46,7 @@
             left: 10px;
             right: 10px;
             font-size: 20px;
+            font-family: 'MyCustomFont', serif;
             line-height: 1.5;
             max-height: 30vh;
             overflow: auto;
@@ -52,61 +58,6 @@
 
 <body>
 
-    <div class="eyes">
-        <div class="eye" id="eyeL">
-            <svg viewBox="0 0 200 200" class="eye-svg">
-
-                <!-- 白眼 -->
-                <circle cx="100" cy="100" r="90" fill="white" />
-
-                <!-- iris -->
-                <g id="irisL">
-                    <circle cx="100" cy="145" r="40" fill="#black" />
-
-                    <!-- pupil -->
-                    <circle cx="120" cy="142" r="5" fill="white" />
-                </g>
-
-                <!-- eyelid（上） -->
-                <rect id="lidTopL" x="0" y="-100" width="200" height="100" fill="#111" />
-
-                <!-- eyelid（下） -->
-                <rect id="lidBottomL" x="0" y="200" width="200" height="100" fill="#111" />
-
-            </svg>
-
-        </div>
-
-        <div class="eye" id="eyeR">
-            <svg viewBox="0 0 200 200" class="eye-svg">
-
-                <!-- 白眼 -->
-                <circle cx="100" cy="100" r="90" fill="white" />
-
-                <!-- iris -->
-                <g id="irisR">
-                    <circle cx="100" cy="145" r="40" fill="#black" />
-
-                    <!-- pupil -->
-                    <circle cx="120" cy="142" r="5" fill="white" />
-                </g>
-
-                <!-- eyelid（上） -->
-                <rect id="lidTopR" x="0" y="-100" width="200" height="100" fill="#111" />
-
-                <!-- eyelid（下） -->
-                <rect id="lidBottomR" x="0" y="200" width="200" height="100" fill="#111" />
-
-            </svg>
-
-        </div>
-        <video id="video" autoplay playsinline style="display:none">
-        </video>
-        <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-        <script src="script.js"></script>
-
-    </div>
 
 
     <div id="ui">
@@ -130,12 +81,17 @@
         let words = [];
         let lastPos = null;
         let stopped = false;
+        let lastWordPoint = null;
+        let minWordSpacing = 100; // 控制词间距（可以调）
 
         /* ---------------- WORD POOL ---------------- */
         const vocab = [
             "walk", "trace", "press", "knead",
             "memory", "ground", "layer", "drift",
-            "imprint", "erase", "surface", "distance"
+            "imprint", "erase", "surface", "distance",
+            "footprint", "step", "tread", "mark",
+            "leave", "trace", "follow", "wander",
+            "earth", "soil", "pavement", "path",
         ];
 
         /* ---------------- GPS ---------------- */
@@ -165,15 +121,29 @@
             ctx.beginPath();
 
             path.forEach((p, i) => {
-                if (i === 0) ctx.moveTo(p.x, p.y);
-                else ctx.lineTo(p.x, p.y);
+                if (!words[i]) return;
+
+                let angle = 0;
+
+                if (i > 0) {
+                    const prev = path[i - 1];
+                    angle = Math.atan2(p.y - prev.y, p.x - prev.x);
+                }
+
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(angle);
+
+                ctx.fillText(words[i], 0, 0);
+
+                ctx.restore();
             });
 
-            ctx.stroke();
 
             // words on path
             ctx.fillStyle = "white";
-            ctx.font = "12px serif";
+            ctx.font = "20pt sans serif";
+            ctx.textBaseline = "middle";
 
             path.forEach((p, i) => {
                 if (words[i]) {
@@ -181,6 +151,9 @@
                 }
             });
         }
+
+
+
 
         /* ---------------- GPS TRACK ---------------- */
         navigator.geolocation.watchPosition(pos => {
@@ -199,18 +172,30 @@
             if (lastPos) {
                 const d = dist(lastPos, p);
 
-                if (d > 3) {
+                if (!lastWordPoint) {
                     path.push(p);
+                    words.push("go");
+                    lastWordPoint = p;
+                } else {
+                    const dx = p.x - lastWordPoint.x;
+                    const dy = p.y - lastWordPoint.y;
+                    const distScreen = Math.sqrt(dx * dx + dy * dy);
 
-                    // generate word per movement
-                    words.push(
-                        vocab[Math.floor(Math.random() * vocab.length)]
-                    );
+                    if (distScreen > minWordSpacing) {
+                        path.push(p);
+
+                        words.push(
+                            vocab[Math.floor(Math.random() * vocab.length)]
+                        );
+
+                        lastWordPoint = p;
+                    }
                 }
             } else {
                 path.push(p);
-                words.push("start");
+                words.push("go");
             }
+
 
             lastPos = p;
 
@@ -224,6 +209,8 @@
         }, {
             enableHighAccuracy: true
         });
+
+
 
         /* ---------------- STOP DETECTION ---------------- */
         let lastMoveTime = Date.now();

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body {
+            background: black;
+            color: white;
+            font-family: serif;
+            padding: 40px;
+        }
+
+        .segment {
+            opacity: 0;
+            filter: blur(10px);
+            transition: all 1s ease;
+            margin-bottom: 20px;
+        }
+
+        .segment.visible {
+            opacity: 1;
+            filter: blur(0px);
+        }
+
+        .status {
+            position: fixed;
+            bottom: 10px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="text"></div>
+    <div class="status" id="status">Waiting...</div>
+
+    <script>
+        const segments = [
+            `The verb ‘to walk’ owes its etymological origin to the Middle Dutch verb walken, which means to knead, to press, or to full.`,
+
+            `These activities seem very logical and timely, because what else are we doing to the earth or in between sidewalk breaks?`,
+
+            `By the weight of our bodies and with the help of gravity we push the matter under us.`,
+
+            `We knead, imprint, trample, and leave traces, whether we want to or not.`,
+
+            `Additionally, we press any thing deeper, beneath our feet, e.g. seeds, environmental fossils or broken artefacts.`,
+
+            `We leave our footprints on top of each other, laying down matter.`,
+
+        ];
+
+        const container = document.getElementById("text");
+
+        // 渲染文本
+        segments.forEach((text, i) => {
+            const div = document.createElement("div");
+            div.className = "segment";
+            div.id = "seg-" + i;
+            div.innerText = text;
+            container.appendChild(div);
+        });
+
+        let lastPosition = null;
+        let totalDistance = 0;
+
+        // 距离计算
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371000;
+            const toRad = deg => deg * Math.PI / 180;
+
+            const dLat = toRad(lat2 - lat1);
+            const dLon = toRad(lon2 - lon1);
+
+            const a =
+                Math.sin(dLat / 2) ** 2 +
+                Math.cos(toRad(lat1)) *
+                Math.cos(toRad(lat2)) *
+                Math.sin(dLon / 2) ** 2;
+
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        // 更新文本显示
+        function updateNarrative() {
+            const step = 1; // 每1米解锁一段
+
+            segments.forEach((_, i) => {
+                const el = document.getElementById("seg-" + i);
+
+                if (totalDistance > i * step) {
+                    el.classList.add("visible");
+                }
+            });
+
+            document.getElementById("status").innerText =
+                `Distance: ${totalDistance.toFixed(2)} m`;
+        }
+
+        // GPS监听
+        navigator.geolocation.watchPosition(pos => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+
+            if (lastPosition) {
+                const d = getDistance(
+                    lastPosition.lat,
+                    lastPosition.lon,
+                    lat,
+                    lon
+                );
+
+                if (d > 3) {
+                    totalDistance += d;
+                }
+            }
+
+            lastPosition = { lat, lon };
+            updateNarrative();
+
+        }, err => {
+            document.getElementById("status").innerText = err.message;
+        }, {
+            enableHighAccuracy: true
+        });
+
+        if (deltaLat > 0) {
+            // 往北 → narrative A
+        } else {
+            // 往南 → narrative B
+        }
+
+        const words = ["knead", "press", "trace", "imprint"];
+        let index = Math.floor(totalDistance % words.length);
+
+    </script>
+
+</body>
+
+</html>
