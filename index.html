@@ -9,11 +9,10 @@
     <style>
         /* full-viewport background canvas */
         #bg {
-            position: fixed;
+            position: absolute; /* span the full document so animation extends while scrolling */
             top: 0;
             left: 0;
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
             z-index: -1;
             display: block;
             pointer-events: none;
@@ -55,10 +54,23 @@
         const ctx = canvas.getContext('2d');
 
         function resize() {
+            // make canvas span the full document height so animation continues below the fold
             canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+            const docHeight = Math.max(document.documentElement.scrollHeight, window.innerHeight);
+            canvas.height = docHeight;
+
+            // regenerate paths to use new dimensions
+            for (let i = 0; i < paths.length; i++) paths[i] = generatePath(150);
         }
+
         window.addEventListener('resize', resize);
+        window.addEventListener('scroll', () => {
+            // if document height changed due to content/scroll, update canvas size
+            const docHeight = Math.max(document.documentElement.scrollHeight, window.innerHeight);
+            if (canvas.height !== docHeight) resize();
+        });
+
+        // initial sizing
         resize();
 
         // generate a random smooth path across the canvas
@@ -114,8 +126,8 @@
             // draw words at intervals to replace some of the strokes (slower)
             if (progressIndex > 12 && textPool && textPool.length) {
                 const wordStep = Math.max(14, Math.floor(progressIndex / 10));
-                    ctx.fillStyle = '#111';
-                    ctx.font = '20px MyCustomFont';
+                ctx.fillStyle = '#111';
+                ctx.font = '20px MyCustomFont';
                 ctx.fontfamily = 'MyCustomFont, sans serif';
                 ctx.textBaseline = 'middle';
                 const timeIndex = Math.floor(frame / textUpdateRate);
