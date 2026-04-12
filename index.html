@@ -17,7 +17,6 @@
             z-index: -1;
             display: block;
             pointer-events: none;
-            color: #f9f1a5;
         }
 
         .controls {
@@ -35,7 +34,7 @@
             color: #f9f1a5;
             border-radius: 20px;
             text-decoration: none;
-            border: 5px solid #fefff3
+            border: 3px solid #001eff
         }
     </style>
 </head>
@@ -119,8 +118,7 @@
             if (progressIndex > 12 && textPool && textPool.length) {
                 const wordStep = Math.max(10, Math.floor(progressIndex / 12));
                 ctx.fillStyle = '#111';
-                ctx.font = '20px serif';
-                ctx.fontFamily = 'MyCustomFont, serif';
+                ctx.font = '14px serif';
                 ctx.textBaseline = 'middle';
                 const timeIndex = Math.floor(frame / textUpdateRate);
                 for (let i = 0; i <= progressIndex; i += wordStep) {
@@ -149,153 +147,37 @@
         // text pool (split into words) to replace some strokes
         const textPool = "Walking, ideally, is a state in which the mind, the body, and the world are aligned, as though they were three characters finally in conversation together, three notes suddenly making a chord. Walking allows us to be in our bodies and in the world without being made busy by them. It leaves us free to think without being wholly lost in our thoughts.".split(/\s+/).map(s => s.replace(/[.,]/g, ''));
         // controls text update speed: larger => slower
-        const textUpdateRate = 5;
-
-        // Sketching state and animation control
-        let isAnimating = true;
-        let frame = 0;
-        const framesPerPath = 480; // frames to draw one full path (doubled to slow motion by half)
         const textUpdateRate = 10;
 
-        const sketchPaths = []; // completed user sketches
-        let currentSketch = null;
-
-        // draw any user sketches (always drawn on top)
-        function drawSketches() {
-            if (!sketchPaths.length && !currentSketch) return;
-            ctx.save();
-            ctx.globalCompositeOperation = 'source-over';
-            // sketches use crisper single-pass stroke
-            const all = sketchPaths.concat(currentSketch ? [currentSketch] : []);
-            all.forEach((sk, pi) => {
-                if (!sk || sk.length < 2) return;
-                ctx.beginPath();
-                for (let i = 0; i < sk.length; i++) {
-                    const p = sk[i];
-                    if (i === 0) ctx.moveTo(p.x, p.y);
-                    else ctx.lineTo(p.x, p.y);
-                }
-                ctx.lineWidth = 2.0;
-                ctx.strokeStyle = '#111';
-                ctx.lineJoin = 'round';
-                ctx.lineCap = 'round';
-                ctx.stroke();
-
-                // draw words along the sketch
-                const step = Math.max(10, Math.floor(sk.length / 12));
-                ctx.fillStyle = '#111';
-                ctx.font = '14px serif';
-                ctx.textBaseline = 'middle';
-                const timeIndex = Math.floor(frame / textUpdateRate);
-                for (let i = 0; i < sk.length; i += step) {
-                    const p = sk[i];
-                    const next = sk[Math.min(i + 1, sk.length - 1)];
-                    if (!p || !next) continue;
-                    const w = textPool[(i + pi + timeIndex) % textPool.length];
-                    const angle = Math.atan2(next.y - p.y, next.x - p.x);
-                    ctx.save();
-                    ctx.translate(p.x, p.y);
-                    ctx.rotate(angle);
-                    ctx.fillText(w, 0, 0);
-                    ctx.restore();
-                }
-            });
-            ctx.restore();
-        }
-
-        // main render loop: always running, but background animation only when enabled
-        function renderLoop() {
-            // clear + background
+        function render() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // background subtle paper texture
             ctx.fillStyle = '#f7f6ef';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            if (isAnimating) {
-                // draw each animated path
-                for (let k = 0; k < paths.length; k++) {
-                    const path = paths[k];
-                    const t = ((frame + k * Math.floor(framesPerPath / paths.length)) % framesPerPath) / framesPerPath;
-                    const idx = Math.floor(t * (path.length - 1));
-                    ctx.save();
-                    ctx.globalAlpha = 0.85 - k * 0.18;
-                    drawPenStroke(path, idx, k);
-                    ctx.restore();
-                }
-                frame = (frame + 1) % framesPerPath;
+            // draw each path at an offset time so they looped staggered
+            for (let k = 0; k < paths.length; k++) {
+                const path = paths[k];
+                // compute progress index for this path
+                const t = ((frame + k * Math.floor(framesPerPath / paths.length)) % framesPerPath) / framesPerPath;
+                const idx = Math.floor(t * (path.length - 1));
+                // fade older strokes
+                ctx.save();
+                ctx.globalAlpha = 0.85 - k * 0.18;
+                drawPenStroke(path, idx, k);
+                ctx.restore();
             }
 
-            // draw user sketches on top (whether animating or not)
-            drawSketches();
-
-            requestAnimationFrame(renderLoop);
+            frame = (frame + 1) % framesPerPath;
+            requestAnimationFrame(render);
         }
 
-        // regenerate animated paths occasionally
+        // regenerate paths occasionally to keep variation (interval doubled to match slower motion)
         setInterval(() => {
             for (let i = 0; i < paths.length; i++) paths[i] = generatePath(150);
         }, 24000);
 
-        renderLoop();
-
-        // ----- Pointer / Touch sketch support -----
-        let isPointerDown = false;
-
-        function toCanvasPos(e) {
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX !== undefined ? e.clientX : e.touches && e.touches[0].clientX);
-            const y = (e.clientY !== undefined ? e.clientY : e.touches && e.touches[0].clientY);
-            return { x: x - rect.left, y: y - rect.top };
-        }
-
-        function stopAnimationAndClear() {
-            isAnimating = false;
-            // clear animated paths and background (keeps sketches)
-            for (let i = 0; i < paths.length; i++) paths[i] = [];
-            frame = 0;
-        }
-
-        function onPointerDown(e) {
-            e.preventDefault();
-            const pos = toCanvasPos(e);
-            // single click toggles animation off and clears animation
-            if (isAnimating) {
-                stopAnimationAndClear();
-            }
-            isPointerDown = true;
-            currentSketch = [{ x: pos.x, y: pos.y }];
-            if (e.pointerId) canvas.setPointerCapture(e.pointerId);
-        }
-
-        function onPointerMove(e) {
-            if (!isPointerDown || !currentSketch) return;
-            e.preventDefault();
-            const pos = toCanvasPos(e);
-            const last = currentSketch[currentSketch.length - 1];
-            const dx = pos.x - last.x;
-            const dy = pos.y - last.y;
-            if (Math.hypot(dx, dy) > 2) {
-                currentSketch.push({ x: pos.x, y: pos.y });
-            }
-        }
-
-        function onPointerUp(e) {
-            if (!isPointerDown) return;
-            isPointerDown = false;
-            if (e.pointerId) canvas.releasePointerCapture(e.pointerId);
-            if (currentSketch && currentSketch.length > 1) sketchPaths.push(currentSketch);
-            currentSketch = null;
-        }
-
-        // attach pointer events (covers mouse + touch on supporting browsers)
-        canvas.addEventListener('pointerdown', onPointerDown);
-        canvas.addEventListener('pointermove', onPointerMove);
-        canvas.addEventListener('pointerup', onPointerUp);
-        canvas.addEventListener('pointercancel', onPointerUp);
-
-        // fallback touch events for older browsers
-        canvas.addEventListener('touchstart', (e) => onPointerDown(e.touches[0]));
-        canvas.addEventListener('touchmove', (e) => onPointerMove(e.touches[0]));
-        canvas.addEventListener('touchend', (e) => onPointerUp(e.changedTouches[0]));
+        render();
     </script>
 
 </body>
