@@ -73,6 +73,7 @@
         <button id="clearBtn" class="btn">Clear</button>
         <button id="saveJpgBtn" class="btn">Save Path</button>
         <button id="uploadBgBtn" class="btn">Upload Photos</button>
+        <button id="toggleBarBtn" class="btn">Hide Bar</button>
     </div>
 
     <div>
@@ -337,6 +338,23 @@
                 toggleControlBar();
             }
         });
+
+        // mobile UI toggle button: fold/hide parameters bar
+        const toggleBarBtn = document.getElementById('toggleBarBtn');
+        if (toggleBarBtn) {
+            function updateToggleLabel() {
+                const bar = document.getElementById('controlBar');
+                if (!bar) return;
+                const hidden = window.getComputedStyle(bar).display === 'none';
+                toggleBarBtn.textContent = hidden ? 'Show Params' : 'Hide Params';
+            }
+            toggleBarBtn.addEventListener('click', () => {
+                toggleControlBar();
+                updateToggleLabel();
+            });
+            // reflect initial state
+            updateToggleLabel();
+        }
         // make control bar vertically draggable on mobile: drag down to hide
         (function makeControlBarDraggable() {
             const bar = document.getElementById('controlBar');
