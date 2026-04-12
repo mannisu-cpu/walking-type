@@ -46,16 +46,17 @@
         .btn {
             background: #111;
             color: #f9f1a5;
+            top: 24px;
             padding: 8px 12px;
             border-radius: 14px;
-            border: 2px solid #fcfae9;
+            border: none;
             text-decoration: none
         }
 
         h3 {
             position: fixed;
             left: 12px;
-            top: 12px;
+            bottom: 80px;
             z-index: 1100;
             font-family: 'MyCustomFont', sans-serif, ;
             color: #111;
@@ -66,11 +67,12 @@
 
 <body>
     <canvas id="drawCanvas"></canvas>
-        <img id="bgImage" alt="background" style="position:fixed;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:998;pointer-events:none;display:none">
+    <img id="bgImage" alt="background"
+        style="position:fixed;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:998;pointer-events:none;display:none">
     <div class="controls">
         <button id="clearBtn" class="btn">Clear</button>
         <button id="saveJpgBtn" class="btn">Save Path</button>
-            <button id="uploadBgBtn" class="btn">Upload BG</button>
+        <button id="uploadBgBtn" class="btn">Upload Photos</button>
     </div>
 
     <div>
@@ -281,11 +283,11 @@
             const url = URL.createObjectURL(f);
             bgImgEl.src = url; bgImgEl.style.display = 'block';
             // revoke URL later when image loads
-            bgImgEl.onload = () => { try { URL.revokeObjectURL(url); } catch (e) {} };
+            bgImgEl.onload = () => { try { URL.revokeObjectURL(url); } catch (e) { } };
         });
 
         // ensure background image stays visible on resize (img uses object-fit:cover)
-        window.addEventListener('resize', ()=>{ /* no-op: CSS handles cover scaling */ });
+        window.addEventListener('resize', () => { /* no-op: CSS handles cover scaling */ });
 
         // optional: draw a faint guide stroke as user moves (uncomment if desired)
         // (kept minimal for text-first aesthetic)
@@ -315,6 +317,67 @@
 
         setupControls();
 
+        // make control bar vertically draggable on mobile: drag down to hide
+        (function makeControlBarDraggable() {
+            const bar = document.getElementById('controlBar');
+            const handle = document.getElementById('controlHandle');
+            if (!bar || !handle) return;
+            let dragging = false;
+            let startY = 0;
+            let startTranslate = 0;
+            let maxHide = 0; // px allowed to hide
+
+            function refreshMaxHide() {
+                maxHide = Math.max(0, bar.offsetHeight - 36); // leave a small peek when hidden
+            }
+            // initialize
+            refreshMaxHide();
+            window.addEventListener('resize', refreshMaxHide);
+
+            function setTranslate(v, animated) {
+                bar.style.transition = animated ? 'transform 220ms ease' : 'none';
+                bar.style.transform = `translateY(${v}px)`;
+            }
+
+            handle.addEventListener('pointerdown', (ev) => {
+                ev.preventDefault();
+                dragging = true;
+                startY = ev.clientY;
+                const m = window.getComputedStyle(bar).transform;
+                if (m && m !== 'none') {
+                    const vals = m.match(/matrix\(([^)]+)\)/);
+                    if (vals) startTranslate = parseFloat(vals[1].split(',')[5]) || 0;
+                    else startTranslate = 0;
+                } else startTranslate = 0;
+                handle.setPointerCapture(ev.pointerId);
+            });
+
+            handle.addEventListener('pointermove', (ev) => {
+                if (!dragging) return;
+                ev.preventDefault();
+                const dy = ev.clientY - startY;
+                const next = Math.min(Math.max(0, startTranslate + dy), maxHide + 8);
+                setTranslate(next, false);
+            });
+
+            function endDrag(ev) {
+                if (!dragging) return; dragging = false;
+                const m = window.getComputedStyle(bar).transform;
+                let current = 0;
+                if (m && m !== 'none') {
+                    const vals = m.match(/matrix\(([^)]+)\)/);
+                    if (vals) current = parseFloat(vals[1].split(',')[5]) || 0;
+                }
+                // snap: if dragged more than half, hide; else show
+                if (current > maxHide * 0.45) setTranslate(maxHide, true);
+                else setTranslate(0, true);
+                try { if (ev && ev.pointerId) handle.releasePointerCapture(ev.pointerId); } catch (e) { }
+            }
+
+            handle.addEventListener('pointerup', endDrag);
+            handle.addEventListener('pointercancel', endDrag);
+            window.addEventListener('pointerup', endDrag);
+        })();
     </script>
 </body>
 
