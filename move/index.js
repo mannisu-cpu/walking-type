@@ -47,7 +47,7 @@ async function loadURL() {
     }
 
     try {
-        const res = await fetch(`http://127.0.0.1:5000/scrape?url=${encodeURIComponent(url)}`);
+        const res = await fetch(`http://172.16.1.103:5000/scrape?url=${encodeURIComponent(url)}`);
         const data = await res.json();
 
         if (data.error) {
