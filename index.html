@@ -37,20 +37,51 @@
             text-decoration: none;
             border: 3px solid #fcfae9
         }
+
+        body {
+            cursor: none;
+        }
+
+        #cursor {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 40px;
+            height: 40px;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+        }
+
+        .img {
+            width: 50%;
+            height: 50%;
+            padding: 2px 2px;
+            object-fit: contain;
+            top: 1%;
+        }
     </style>
 </head>
 
 <body>
 
     <canvas id="bg"></canvas>
-
     <div class="controls">
         <a class="btn" href="move/move.html">Walking while reading</a>
-        <a class="btn" href="pause/walking2.html">Writing on the move</a>
+        <a class="btn" href="pause/walking3.html">Writing on the move</a>
         <a class="btn" href="walk on the screen/screen.html">Walking on the screen</a>
     </div>
+    <img id="cursor" src="images/foot.png">
 
     <script>
+        const cursor = document.getElementById("cursor");
+
+        document.addEventListener("mousemove", (e) => {
+            cursor.style.left = e.clientX + "px";
+            cursor.style.top = e.clientY + "px";
+        });
+
+
         // Background looping pen-like path animation
         const canvas = document.getElementById('bg');
         const ctx = canvas.getContext('2d');

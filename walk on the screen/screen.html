@@ -54,9 +54,11 @@
         }
 
         /* Use foot cursor from images folder (path relative to this file) */
-        body, #drawCanvas {
-            cursor: url('../images/foot.svg') 16 16, auto;
+        body,
+        #drawCanvas {
+            cursor: none;
         }
+
 
         h3 {
             position: fixed;
@@ -67,6 +69,19 @@
             font-size: 12pt;
             color: #111;
             margin: 0;
+        }
+
+
+
+        #cursor {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 40px;
+            height: 40px;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
         }
     </style>
 </head>
@@ -84,9 +99,10 @@
 
     <div>
         <h3> Use your finger or mouse as foot, trace the path on the screen.
-
         </h3>
     </div>
+
+    <img id="cursor" src="images/foot.png">
 
     <!-- Control bar: color pickers and sliders to tune generated text path -->
     <div id="controlBar"
@@ -114,6 +130,14 @@
     </div>
 
     <script>
+
+        const cursor = document.getElementById("cursor");
+
+        document.addEventListener("mousemove", (e) => {
+            cursor.style.left = e.clientX + "px";
+            cursor.style.top = e.clientY + "px";
+        });
+
         const canvas = document.getElementById('drawCanvas');
         const ctx = canvas.getContext('2d');
 
@@ -390,12 +414,12 @@
                 const c = document.createElement('canvas');
                 c.width = size; c.height = size;
                 const cx = c.getContext('2d');
-                cx.clearRect(0,0,size,size);
+                cx.clearRect(0, 0, size, size);
                 // draw svg into canvas scaled to fit
                 try {
                     cx.drawImage(img, 0, 0, size, size);
                     const data = c.toDataURL('image/png');
-                    const hotspot = Math.floor(size/2);
+                    const hotspot = Math.floor(size / 2);
                     const cursor = `url(${data}) ${hotspot} ${hotspot}, auto`;
                     document.body.style.cursor = cursor;
                     canvas.style.cursor = cursor;
@@ -410,7 +434,7 @@
         // try to set cursor at a standard size; call again if user wants different size
         setCustomCursor(32);
         // Transform the `h3` text into a trailing cursor tail composed of its characters.
-        (function setupCursorTail(){
+        (function setupCursorTail() {
             const h3 = document.querySelector('h3');
             if (!h3) return;
             const raw = (h3.textContent || '').trim();
@@ -423,7 +447,7 @@
             let lastTime = 0;
             const minInterval = 40; // ms between characters
 
-            function spawnCharAt(x,y){
+            function spawnCharAt(x, y) {
                 const ch = tailText[tailIndex++ % tailText.length];
                 const span = document.createElement('span');
                 span.textContent = ch;
@@ -434,26 +458,26 @@
                 span.style.pointerEvents = 'none';
                 span.style.fontFamily = "MyCustomFont, system-ui, Arial";
                 span.style.fontSize = Math.max(12, Math.round(fontSize * 0.9)) + 'px';
-                span.style.color = mixColor(colorA, colorB, mix * ((tailIndex % 10)/9));
+                span.style.color = mixColor(colorA, colorB, mix * ((tailIndex % 10) / 9));
                 span.style.opacity = '1';
                 span.style.transition = 'transform 850ms cubic-bezier(.22,1,.36,1), opacity 850ms linear';
                 document.body.appendChild(span);
                 // on next frame, push it upward and fade
-                requestAnimationFrame(()=>{
+                requestAnimationFrame(() => {
                     span.style.transform = 'translate(-50%,-150%)';
                     span.style.opacity = '0';
                 });
                 // cleanup
-                setTimeout(()=>{ try{ span.remove(); }catch(e){} }, 900);
+                setTimeout(() => { try { span.remove(); } catch (e) { } }, 900);
             }
 
-            function onPointerMove(e){
+            function onPointerMove(e) {
                 const now = performance.now();
                 if (now - lastTime < minInterval) return;
                 lastTime = now;
                 const x = e.clientX || (e.touches && e.touches[0] && e.touches[0].clientX) || 0;
                 const y = e.clientY || (e.touches && e.touches[0] && e.touches[0].clientY) || 0;
-                spawnCharAt(x,y);
+                spawnCharAt(x, y);
             }
 
             // pointer events cover mouse and touch; keep passive:false to allow preventDefault elsewhere
