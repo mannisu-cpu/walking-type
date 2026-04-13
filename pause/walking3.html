@@ -188,6 +188,8 @@
         /* ---------------- DATA ---------------- */
         let lines = [[]];   // 每一行是一组点
         let wordLines = [[]];
+        let path = [];      // 当前行的点
+        let words = [];     // 当前行的单词
 
         let lastPoint = { x: canvas.width / 2, y: canvas.height / 2 };
         let lastWordPoint = null;
@@ -485,7 +487,7 @@
             a.remove();
         }
         /* ---------------- GPS TRACKING ---------------- */
-        let gpsWatchId = null;
+        var gpsWatchId = null;
         let originLat = null;
         let originLon = null;
         const gpsScale = 2; // pixels per meter (adjust for zoom)
