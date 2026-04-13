@@ -446,6 +446,7 @@
         function replay() {
 
             let output = "";
+            let text = words.join(" ");
 
             wordLines.forEach(line => {
                 output += line.join(" ") + "\n\n";
@@ -456,7 +457,7 @@
 
             if (words.length < 2) return;
 
-            let text = words.join(" ");
+
 
             document.getElementById("text").innerText =
                 "REPLAY TEXT:\n\n" + text;
