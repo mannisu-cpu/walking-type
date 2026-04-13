@@ -448,16 +448,18 @@
             let output = "";
             let text = words.join(" ");
 
+            console.log("words", words);
+
             wordLines.forEach(line => {
                 output += line.join(" ") + "\n\n";
             });
+
+            console.log("output", output);
 
             document.getElementById("text").innerText =
                 "REPLAY TEXT:\n\n" + text;
 
             if (words.length < 2) return;
-
-
 
             document.getElementById("text").innerText =
                 "REPLAY TEXT:\n\n" + text;
