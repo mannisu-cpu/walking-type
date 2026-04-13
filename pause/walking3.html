@@ -448,21 +448,21 @@
             let output = "";
             let text = words.join(" ");
 
-            console.log("words", words);
+            // console.log("words", words);
 
             wordLines.forEach(line => {
                 output += line.join(" ") + "\n\n";
             });
 
-            console.log("output", output);
+            // console.log("output", output);
 
             document.getElementById("text").innerText =
-                "REPLAY TEXT:\n\n" + text;
+                "REPLAY TEXT:\n\n" + output;
 
             if (words.length < 2) return;
 
             document.getElementById("text").innerText =
-                "REPLAY TEXT:\n\n" + text;
+                "REPLAY TEXT:\n\n" + output;
         }
 
         // Export current canvas as a JPEG and trigger download
