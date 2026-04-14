@@ -9,7 +9,7 @@
     <style>
         @font-face {
             font-family: 'MyCustomFont';
-            src: url('fonts/ABCDiatypeVariable.ttf') format('opentype');
+            src: url('./fonts/ABCDiatypeVariable.ttf') format('opentype');
         }
 
         body {
@@ -215,11 +215,11 @@
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            ctx.strokeStyle = "white";
+            ctx.strokeStyle = "yellow";
             ctx.lineWidth = 2;
 
             ctx.fillStyle = "white";
-            ctx.font = "16px serif";
+            ctx.font = "30px MyCustomFont";
             ctx.textBaseline = "middle";
 
             lines.forEach((line, li) => {
