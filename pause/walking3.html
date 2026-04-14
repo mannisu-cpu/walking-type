@@ -317,16 +317,83 @@
 
         /* ---------------- STEP GENERATION ---------------- */
         function addStep(intensity) {
+            // Try to place the next step so it doesn't overlap existing "footprints".
+            // We'll attempt several random directions, preferring ones that are at least
+            // `minSeparation` away from any existing path point. If all attempts fail,
+            // we'll accept the best candidate and nudge it outward.
 
-            // 根据晃动强度决定方向变化
-            const angle = Math.random() * Math.PI * 2;
+            const minSeparation = Math.max(22, stepSize * 1.6); // px between footprints
+            const maxAttempts = 14;
 
-            const newPoint = {
-                x: lastPoint.x + Math.cos(angle) * stepSize,
-                y: lastPoint.y + Math.sin(angle) * stepSize
+            function dist2(a, b) {
+                const dx = a.x - b.x;
+                const dy = a.y - b.y;
+                return dx * dx + dy * dy;
+            }
+
+            let bestPoint = null;
+            let bestMinDist2 = -1;
+
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                const angle = Math.random() * Math.PI * 2;
+                const candidate = {
+                    x: lastPoint.x + Math.cos(angle) * stepSize,
+                    y: lastPoint.y + Math.sin(angle) * stepSize
+                };
+
+                // compute nearest distance squared to existing path points
+                let nearest2 = Infinity;
+                for (let i = 0; i < path.length; i++) {
+                    const d2 = dist2(candidate, path[i]);
+                    if (d2 < nearest2) nearest2 = d2;
+                    // quick reject if already overlapping badly
+                    if (nearest2 < (minSeparation * minSeparation) / 4) break;
+                }
+
+                if (nearest2 > bestMinDist2) {
+                    bestMinDist2 = nearest2;
+                    bestPoint = candidate;
+                }
+
+                // if candidate is sufficiently far from others accept it
+                if (nearest2 >= minSeparation * minSeparation) {
+                    bestPoint = candidate;
+                    break;
+                }
+            }
+
+            let newPoint = bestPoint || {
+                x: lastPoint.x + stepSize,
+                y: lastPoint.y
             };
 
-            // 控制单词间距
+            // if still too close, push it outward along vector from nearest point
+            if (path.length > 0) {
+                // find nearest existing point
+                let nearestIdx = -1;
+                let nearest2 = Infinity;
+                for (let i = 0; i < path.length; i++) {
+                    const d2 = dist2(newPoint, path[i]);
+                    if (d2 < nearest2) {
+                        nearest2 = d2;
+                        nearestIdx = i;
+                    }
+                }
+
+                const minSep2 = minSeparation * minSeparation;
+                if (nearest2 < minSep2 && nearestIdx >= 0) {
+                    const near = path[nearestIdx];
+                    const dx = newPoint.x - near.x || 0.0001;
+                    const dy = newPoint.y - near.y || 0.0001;
+                    const d = Math.sqrt(dx * dx + dy * dy);
+                    const need = (minSeparation - d);
+                    // nudge along the normalized vector away from the nearest point
+                    newPoint.x += (dx / d) * need;
+                    newPoint.y += (dy / d) * need;
+                }
+            }
+
+            // Add the step to the path. Keep words spaced by `wordSpacing` as before.
             if (!lastWordPoint) {
                 path.push(newPoint);
                 words.push("start");
@@ -338,12 +405,23 @@
 
                 if (dist > wordSpacing) {
                     path.push(newPoint);
+                    // choose a word that doesn't collide with nearby words by trying a few
+                    // random picks and preferring ones that will render in short length
+                    let w = null;
+                    for (let t = 0; t < 6; t++) {
+                        const candidate = vocab[Math.floor(Math.random() * vocab.length)];
+                        // prefer shorter words when spacing is tight
+                        if (dist / wordSpacing < 1.6) {
+                            if (candidate.length <= 6) { w = candidate; break; }
+                        } else { w = candidate; break; }
+                    }
+                    if (!w) w = vocab[Math.floor(Math.random() * vocab.length)];
 
-                    words.push(
-                        vocab[Math.floor(Math.random() * vocab.length)]
-                    );
-
+                    words.push(w);
                     lastWordPoint = newPoint;
+                } else {
+                    // still push the step (even if not adding a word) to keep continuity
+                    path.push(newPoint);
                 }
             }
 
