@@ -24,6 +24,7 @@
             position: absolute;
             top: 0;
             left: 0;
+            touch-action: none;
         }
 
         #ui {
@@ -62,7 +63,7 @@
         }
 
         #text {
-            font-family: 'MyCustomFont', sans-serif;
+            font-family: 'MyCustomFont', serif;
             font-size: 16pt;
             position: fixed;
             bottom: 10px;
@@ -70,9 +71,9 @@
             right: 10px;
             max-height: 30vh;
             overflow: auto;
+            font-size: 14px;
             line-height: 1.5;
             opacity: 1;
-            font-display: swap;
         }
 
 
@@ -185,11 +186,44 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
+        // Pan/drag workspace state (allows moving the canvas content with touch/mouse)
+        let panX = 0;
+        let panY = 0;
+        let isPanning = false;
+        let panStart = { x: 0, y: 0 };
+
+        // Pointer events for dragging (works for touch and mouse)
+        canvas.addEventListener('pointerdown', (e) => {
+            isPanning = true;
+            panStart.x = e.clientX;
+            panStart.y = e.clientY;
+            canvas.setPointerCapture(e.pointerId);
+            e.preventDefault();
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            if (!isPanning) return;
+            const dx = e.clientX - panStart.x;
+            const dy = e.clientY - panStart.y;
+            panX += dx;
+            panY += dy;
+            panStart.x = e.clientX;
+            panStart.y = e.clientY;
+            e.preventDefault();
+        });
+
+        function endPan(e) {
+            isPanning = false;
+            try { canvas.releasePointerCapture && canvas.releasePointerCapture(e.pointerId); } catch (err) { }
+        }
+
+        canvas.addEventListener('pointerup', endPan);
+        canvas.addEventListener('pointercancel', endPan);
+        canvas.addEventListener('pointerleave', endPan);
+
         /* ---------------- DATA ---------------- */
-        let lines = [[]];   // 每一行是一组点
-        let wordLines = [[]];
-        let path = [];      // 当前行的点
-        let words = [];     // 当前行的单词
+        let path = [];
+        let words = [];
 
         let lastPoint = { x: canvas.width / 2, y: canvas.height / 2 };
         let lastWordPoint = null;
@@ -215,88 +249,51 @@
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            // Apply pan translation so the user can drag the workspace
+            ctx.save();
+            ctx.translate(panX, panY);
+
             ctx.strokeStyle = "yellow";
             ctx.lineWidth = 2;
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = "transparent";
+
+            ctx.beginPath();
+            path.forEach((p, i) => {
+                if (i === 0) ctx.moveTo(p.x, p.y);
+                else ctx.lineTo(p.x, p.y);
+            });
+            ctx.stroke();
 
             ctx.fillStyle = "white";
             ctx.font = "30px MyCustomFont";
             ctx.textBaseline = "middle";
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = "transparent";
 
-            lines.forEach((line, li) => {
+            path.forEach((p, i) => {
+                if (!words[i]) return;
 
-                ctx.beginPath();
+                let angle = 0;
+                if (i > 0) {
+                    const prev = path[i - 1];
+                    angle = Math.atan2(p.y - prev.y, p.x - prev.x);
+                }
 
-                line.forEach((p, i) => {
-                    if (i === 0) ctx.moveTo(p.x, p.y);
-                    else ctx.lineTo(p.x, p.y);
-                });
-
-                ctx.stroke();
-
-                line.forEach((p, i) => {
-
-                    const word = wordLines[li][i];
-                    if (!word) return;
-
-                    let angle = 0;
-
-                    if (i > 0) {
-                        const prev = line[i - 1];
-                        angle = Math.atan2(p.y - prev.y, p.x - prev.x);
-                    }
-
-                    ctx.save();
-                    ctx.translate(p.x, p.y);
-                    ctx.rotate(angle);
-                    ctx.fillText(word, 0, 0);
-                    ctx.restore();
-                });
-
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(angle);
+                ctx.fillText(words[i], 0, 0);
+                ctx.restore();
             });
-        }
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        ctx.strokeStyle = "yellow";
-        ctx.lineWidth = 2;
-        ctx.shadowBlur = 0;
-        ctx.shadowColor = "transparent";
-
-        ctx.beginPath();
-        path.forEach((p, i) => {
-            if (i === 0) ctx.moveTo(p.x, p.y);
-            else ctx.lineTo(p.x, p.y);
-        });
-        ctx.stroke();
-
-        ctx.fillStyle = "white";
-        ctx.font = "30px MyCustomFont";
-        ctx.textBaseline = "middle";
-        ctx.shadowBlur = 0;
-        ctx.shadowColor = "transparent";
-
-        path.forEach((p, i) => {
-            if (!words[i]) return;
-
-            let angle = 0;
-            if (i > 0) {
-                const prev = path[i - 1];
-                angle = Math.atan2(p.y - prev.y, p.x - prev.x);
-            }
-
-            ctx.save();
-            ctx.translate(p.x, p.y);
-            ctx.rotate(angle);
-            ctx.fillText(words[i], 0, 0);
             ctx.restore();
-        });
-
+        }
 
         /* ---------------- STEP GENERATION ---------------- */
-        let currentLine = 0;
-        let lineLength = 0;
-
         function addStep(intensity) {
 
+            // 根据晃动强度决定方向变化
             const angle = Math.random() * Math.PI * 2;
 
             const newPoint = {
@@ -304,43 +301,10 @@
                 y: lastPoint.y + Math.sin(angle) * stepSize
             };
 
-            newPoint.x = Math.max(0, Math.min(canvas.width, newPoint.x));
-            newPoint.y = Math.max(0, Math.min(canvas.height, newPoint.y));
-
-            // 👉 当前行
-            let currentPath = lines[currentLine];
-            let currentWords = wordLines[currentLine];
-
-            // 👉 计算方向变化（用于断行）
-            let turnAngle = 0;
-            if (currentPath.length > 1) {
-                const a = currentPath[currentPath.length - 2];
-                const b = currentPath[currentPath.length - 1];
-
-                const angle1 = Math.atan2(b.y - a.y, b.x - a.x);
-                const angle2 = Math.atan2(newPoint.y - b.y, newPoint.x - b.x);
-
-                turnAngle = Math.abs(angle2 - angle1);
-            }
-
-            // 👉 累计长度
-            lineLength += stepSize;
-
-            // 🔥 自动换行条件
-            if (lineLength > 300 || turnAngle > 1.0) {
-
-                currentLine++;
-                lines[currentLine] = [];
-                wordLines[currentLine] = [];
-
-                lineLength = 0;
-                lastWordPoint = null;
-            }
-
-            // 👉 单词间距控制
+            // 控制单词间距
             if (!lastWordPoint) {
-                lines[currentLine].push(newPoint);
-                wordLines[currentLine].push("start");
+                path.push(newPoint);
+                words.push("start");
                 lastWordPoint = newPoint;
             } else {
                 const dx = newPoint.x - lastWordPoint.x;
@@ -348,54 +312,15 @@
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
                 if (dist > wordSpacing) {
-                    lines[currentLine].push(newPoint);
+                    path.push(newPoint);
 
-                    wordLines[currentLine].push(
+                    words.push(
                         vocab[Math.floor(Math.random() * vocab.length)]
                     );
 
                     lastWordPoint = newPoint;
                 }
             }
-
-            lastPoint = newPoint;
-
-            document.getElementById("status").innerText =
-                `lines: ${lines.length}`;
-        }
-
-        // 根据晃动强度决定方向变化
-        const angle = Math.random() * Math.PI * 2;
-
-        const newPoint = {
-            x: lastPoint.x + Math.cos(angle) * stepSize,
-            y: lastPoint.y + Math.sin(angle) * stepSize
-        };
-
-        // 边界限制
-        newPoint.x = Math.max(0, Math.min(canvas.width, newPoint.x));
-        newPoint.y = Math.max(0, Math.min(canvas.height, newPoint.y));
-
-        // 控制单词间距
-        if (!lastWordPoint) {
-            path.push(newPoint);
-            words.push("start");
-            lastWordPoint = newPoint;
-        } else {
-            const dx = newPoint.x - lastWordPoint.x;
-            const dy = newPoint.y - lastWordPoint.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist > wordSpacing) {
-                path.push(newPoint);
-
-                words.push(
-                    vocab[Math.floor(Math.random() * vocab.length)]
-                );
-
-                lastWordPoint = newPoint;
-            }
-
 
             lastPoint = newPoint;
 
@@ -444,25 +369,12 @@
 
         /* ---------------- REPLAY ---------------- */
         function replay() {
-
-            let output = "";
-            let text = words.join(" ");
-
-            // console.log("words", words);
-
-            wordLines.forEach(line => {
-                output += line.join(" ") + "\n\n";
-            });
-
-            // console.log("output", output);
-
-            document.getElementById("text").innerText =
-                "REPLAY TEXT:\n\n" + output;
-
             if (words.length < 2) return;
 
+            let text = words.join(" ");
+
             document.getElementById("text").innerText =
-                "REPLAY TEXT:\n\n" + output;
+                "REPLAY TEXT:\n\n" + text;
         }
 
         // Export current canvas as a JPEG and trigger download
@@ -490,7 +402,7 @@
             a.remove();
         }
         /* ---------------- GPS TRACKING ---------------- */
-        var gpsWatchId = null;
+        let gpsWatchId = null;
         let originLat = null;
         let originLon = null;
         const gpsScale = 2; // pixels per meter (adjust for zoom)
