@@ -39,6 +39,7 @@
             background: rgba(0, 0, 0, 0.25);
             padding: 6px 12px;
             border-radius: 20px;
+            transition: transform 0.22s ease, opacity 0.22s ease;
         }
 
         #ui button {
@@ -74,6 +75,28 @@
             font-size: 14px;
             line-height: 1.5;
             opacity: 1;
+        }
+
+        /* toggle button for hiding/showing the UI controls */
+        #uiToggle {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 11;
+            padding: 6px 10px;
+            border-radius: 20px;
+            background: rgba(0,0,0,0.35);
+            color: #f9f1a5;
+            border: 1px solid #f9f1a5;
+            font-family: 'MyCustomFont', serif;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #ui.hidden {
+            transform: translateX(-50%) translateY(-120%);
+            opacity: 0;
+            pointer-events: none;
         }
 
 
@@ -166,6 +189,8 @@
         <script src="script.js"></script>
 
     </div>
+
+    <button id="uiToggle" aria-expanded="true" title="Toggle controls">☰</button>
 
     <div id="ui">
         <button onclick="requestPermission()">GO</button>
@@ -487,6 +512,26 @@
         } else {
             loop();
         }
+
+        // UI toggle: hide/show the control bar so it doesn't obstruct the canvas
+        (function () {
+            const ui = document.getElementById('ui');
+            const btn = document.getElementById('uiToggle');
+            if (!ui || !btn) return;
+
+            btn.addEventListener('click', (e) => {
+                const hidden = ui.classList.toggle('hidden');
+                btn.innerText = hidden ? '☰' : '✕';
+                btn.setAttribute('aria-expanded', (!hidden).toString());
+            });
+
+            // start with UI visible on large screens, collapsed on small screens
+            if (window.innerWidth < 600) {
+                ui.classList.add('hidden');
+                btn.innerText = '☰';
+                btn.setAttribute('aria-expanded', 'false');
+            }
+        })();
     </script>
 
 </body>
