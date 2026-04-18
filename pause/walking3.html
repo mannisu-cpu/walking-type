@@ -85,7 +85,7 @@
             z-index: 11;
             padding: 6px 10px;
             border-radius: 20px;
-            background: rgba(0,0,0,0.35);
+            background: rgba(0, 0, 0, 0.35);
             color: #f9f1a5;
             border: 1px solid #f9f1a5;
             font-family: 'MyCustomFont', serif;
@@ -197,6 +197,8 @@
         <button onclick="replay()">Read My Path</button>
         <button id="gpsBtn" onclick="toggleGPS()">Use GPS</button>
         <button onclick="savePath()">Save My Path</button>
+        <label id="spacingLabel" style="font-size:12px; color:#f9f1a5; margin-left:6px;">Spacing: 25</label>
+        <input id="spacingRange" type="range" min="8" max="120" value="25" style="width:110px; margin-left:6px;">
         <span id="status">waiting...</span>
     </div>
 
@@ -254,7 +256,7 @@
 
         /* ---------------- CONFIG ---------------- */
         const stepSize = 12;
-        const wordSpacing = 25;
+        let wordSpacing = 25; // px between words; adjustable at runtime via UI
 
         /* ---------------- WORDS ---------------- */
         const vocab = [
@@ -605,6 +607,20 @@
                 ui.classList.add('hidden');
                 btn.innerText = '☰';
                 btn.setAttribute('aria-expanded', 'false');
+            }
+
+            // wire the spacing slider to update `wordSpacing`
+            const spacingRange = document.getElementById('spacingRange');
+            const spacingLabel = document.getElementById('spacingLabel');
+            if (spacingRange && spacingLabel) {
+                spacingRange.addEventListener('input', (e) => {
+                    const v = Number(e.target.value);
+                    wordSpacing = v;
+                    spacingLabel.innerText = 'Spacing: ' + v;
+                });
+                // initialize label
+                spacingLabel.innerText = 'Spacing: ' + spacingRange.value;
+                wordSpacing = Number(spacingRange.value);
             }
         })();
     </script>
