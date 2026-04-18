@@ -430,28 +430,46 @@
         /* ---------------- MOTION ---------------- */
         let lastMove = 0;
 
+        // Improved shake detection: peak-tracking + hysteresis to generate a single
+        // word per distinct shake event. This reduces false positives when stationary.
+        let shakeInProgress = false;
+        let lastShakeTime = 0;
+        const shakeHigh = 20; // peak required to start a shake window
+        const shakeLow = 11;  // fall below this to consider the window complete
+        const minShakeInterval = 700; // ms between completed shakes
+        let currentPeak = 0;
+        let lastPeak = 0;
+        const minPeakDelta = 4; // require current peak exceed last peak by this amount
+
         function startMotion() {
             window.addEventListener("devicemotion", e => {
-
                 const acc = e.accelerationIncludingGravity;
+                if (!acc) return;
 
-                const magnitude =
-                    Math.abs(acc.x) +
-                    Math.abs(acc.y) +
-                    Math.abs(acc.z);
+                const magnitude = Math.abs(acc.x) + Math.abs(acc.y) + Math.abs(acc.z);
+                const now = Date.now();
 
-                // 灵敏度阈值（可调）
-                if (magnitude > 15) {
+                if (!shakeInProgress) {
+                    if (magnitude >= shakeHigh && (now - lastShakeTime) > minShakeInterval) {
+                        shakeInProgress = true;
+                        currentPeak = magnitude;
+                    }
+                } else {
+                    if (magnitude > currentPeak) currentPeak = magnitude;
 
-                    const now = Date.now();
-
-                    if (now - lastMove > 250) {
-                        addStep(magnitude);
-                        lastMove = now;
+                    if (magnitude <= shakeLow) {
+                        // only accept this as a completed shake if the peak is meaningfully
+                        // larger than the previous peak and sufficient time has passed
+                        if ((currentPeak - lastPeak) >= minPeakDelta && (now - lastShakeTime) > minShakeInterval) {
+                            addStep(currentPeak);
+                            lastShakeTime = now;
+                            lastPeak = currentPeak;
+                        }
+                        currentPeak = 0;
+                        shakeInProgress = false;
                     }
                 }
-
-            });
+            }, { passive: true });
         }
 
         function requestPermission() {
