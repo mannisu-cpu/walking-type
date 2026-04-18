@@ -35,8 +35,7 @@
             z-index: 10;
             display: flex;
             align-items: center;
-            gap: 12px;
-            flex-wrap: wrap; /* allow controls to wrap to new line on narrow screens */
+            gap: 20px;
             background: rgba(0, 0, 0, 0.25);
             padding: 6px 12px;
             border-radius: 20px;
@@ -98,19 +97,6 @@
             transform: translateX(-50%) translateY(-120%);
             opacity: 0;
             pointer-events: none;
-        }
-
-        /* Ensure the spacing slider moves to its own row on small screens */
-        @media (max-width: 520px) {
-            #spacingLabel, #spacingRange {
-                flex-basis: 100%;
-                margin-left: 0 !important;
-                width: auto !important;
-            }
-
-            #ui button {
-                flex: 0 0 auto;
-            }
         }
 
 
@@ -211,8 +197,6 @@
         <button onclick="replay()">Read My Path</button>
         <button id="gpsBtn" onclick="toggleGPS()">Use GPS</button>
         <button onclick="savePath()">Save My Path</button>
-        <label id="spacingLabel" style="font-size:12px; color:#f9f1a5; margin-left:6px;">Spacing: 25</label>
-        <input id="spacingRange" type="range" min="8" max="120" value="25" style="width:110px; margin-left:6px;">
         <span id="status">waiting...</span>
     </div>
 
@@ -270,7 +254,7 @@
 
         /* ---------------- CONFIG ---------------- */
         const stepSize = 12;
-        let wordSpacing = 25; // px between words; adjustable at runtime via UI
+        const wordSpacing = 25;
 
         /* ---------------- WORDS ---------------- */
         const vocab = [
@@ -311,18 +295,16 @@
             ctx.shadowBlur = 0;
             ctx.shadowColor = "transparent";
 
-            // draw words centered on each segment (midpoint of prev->current)
+            // draw words at the endpoint of each segment so the endpoint becomes the new center
             for (let i = 1; i < path.length; i++) {
                 const p = path[i];
                 const prev = path[i - 1];
                 const w = words[i] || '';
                 if (!w) continue;
-                const mx = (prev.x + p.x) / 2;
-                const my = (prev.y + p.y) / 2;
                 const angle = Math.atan2(p.y - prev.y, p.x - prev.x);
 
                 ctx.save();
-                ctx.translate(mx, my);
+                ctx.translate(p.x, p.y);
                 ctx.rotate(angle);
                 ctx.fillText(w, 0, 0);
                 ctx.restore();
@@ -391,7 +373,7 @@
             newPoint.x += Math.cos(segAngle) * extraLen;
             newPoint.y += Math.sin(segAngle) * extraLen;
 
-            // if still too close to ANY existing point, push it outward along vector from nearest point
+            // if still too close, push it outward along vector from nearest point
             if (path.length > 0) {
                 // find nearest existing point
                 let nearestIdx = -1;
@@ -407,28 +389,13 @@
                 const minSep2 = minSeparation * minSeparation;
                 if (nearest2 < minSep2 && nearestIdx >= 0) {
                     const near = path[nearestIdx];
-                    let dx = newPoint.x - near.x;
-                    let dy = newPoint.y - near.y;
-                    let d = Math.sqrt(dx * dx + dy * dy) || 0.0001;
-                    const need = (minSeparation - d) + 2; // small extra gap
+                    const dx = newPoint.x - near.x || 0.0001;
+                    const dy = newPoint.y - near.y || 0.0001;
+                    const d = Math.sqrt(dx * dx + dy * dy);
+                    const need = (minSeparation - d);
                     // nudge along the normalized vector away from the nearest point
                     newPoint.x += (dx / d) * need;
                     newPoint.y += (dy / d) * need;
-                }
-
-                // specifically ensure new word does not overlap the immediately previous word's position
-                // previous word pos is last entry in `path` (if any)
-                const prevIdx = path.length - 1;
-                if (prevIdx >= 0) {
-                    const prev = path[prevIdx];
-                    let pdx = newPoint.x - prev.x;
-                    let pdy = newPoint.y - prev.y;
-                    let pd = Math.sqrt(pdx * pdx + pdy * pdy) || 0.0001;
-                    if (pd < wordSpacing) {
-                        const extra = wordSpacing - pd + 4;
-                        newPoint.x += (pdx / pd) * extra;
-                        newPoint.y += (pdy / pd) * extra;
-                    }
                 }
             }
 
@@ -463,39 +430,28 @@
         /* ---------------- MOTION ---------------- */
         let lastMove = 0;
 
-        // Shake detection: one generated word per distinct shake cycle.
-        // Uses simple hysteresis: enter shake when magnitude > `shakeHigh`,
-        // and complete the shake when magnitude falls below `shakeLow`.
-        let shakeInProgress = false;
-        let lastShakeTime = 0;
-        const shakeHigh = 18; // require a stronger peak to start
-        const shakeLow = 12;  // drop below this to end the shake
-        const minShakeInterval = 600; // ms between completed shakes
-
         function startMotion() {
             window.addEventListener("devicemotion", e => {
+
                 const acc = e.accelerationIncludingGravity;
-                if (!acc) return;
 
-                const magnitude = Math.abs(acc.x) + Math.abs(acc.y) + Math.abs(acc.z);
+                const magnitude =
+                    Math.abs(acc.x) +
+                    Math.abs(acc.y) +
+                    Math.abs(acc.z);
 
-                const now = Date.now();
+                // 灵敏度阈值（可调）
+                if (magnitude > 15) {
 
-                if (!shakeInProgress) {
-                    // try to enter shake state only on a noticeable peak
-                    if (magnitude >= shakeHigh && (now - lastShakeTime) > minShakeInterval) {
-                        shakeInProgress = true;
-                    }
-                } else {
-                    // when magnitude drops below low threshold, we treat it as one shake
-                    if (magnitude <= shakeLow) {
-                        // complete shake: generate a single step
+                    const now = Date.now();
+
+                    if (now - lastMove > 250) {
                         addStep(magnitude);
-                        lastShakeTime = now;
-                        shakeInProgress = false;
+                        lastMove = now;
                     }
                 }
-            }, { passive: true });
+
+            });
         }
 
         function requestPermission() {
@@ -647,20 +603,6 @@
                 ui.classList.add('hidden');
                 btn.innerText = '☰';
                 btn.setAttribute('aria-expanded', 'false');
-            }
-
-            // wire the spacing slider to update `wordSpacing`
-            const spacingRange = document.getElementById('spacingRange');
-            const spacingLabel = document.getElementById('spacingLabel');
-            if (spacingRange && spacingLabel) {
-                spacingRange.addEventListener('input', (e) => {
-                    const v = Number(e.target.value);
-                    wordSpacing = v;
-                    spacingLabel.innerText = 'Spacing: ' + v;
-                });
-                // initialize label
-                spacingLabel.innerText = 'Spacing: ' + spacingRange.value;
-                wordSpacing = Number(spacingRange.value);
             }
         })();
     </script>
