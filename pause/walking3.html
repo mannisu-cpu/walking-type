@@ -434,12 +434,12 @@
         // word per distinct shake event. This reduces false positives when stationary.
         let shakeInProgress = false;
         let lastShakeTime = 0;
-        const shakeHigh = 20; // peak required to start a shake window
-        const shakeLow = 11;  // fall below this to consider the window complete
-        const minShakeInterval = 700; // ms between completed shakes
+        const shakeHigh = 9; // peak required to start a shake window (lowered for responsiveness)
+        const shakeLow = 5;  // fall below this to consider the window complete
+        const minShakeInterval = 250; // ms between completed shakes (shorter debounce)
         let currentPeak = 0;
         let lastPeak = 0;
-        const minPeakDelta = 4; // require current peak exceed last peak by this amount
+        const minPeakDelta = 1; // require current peak exceed last peak by this amount (smaller delta)
 
         function startMotion() {
             window.addEventListener("devicemotion", e => {
