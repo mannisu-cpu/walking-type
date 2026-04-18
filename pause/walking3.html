@@ -377,7 +377,7 @@
             newPoint.x += Math.cos(segAngle) * extraLen;
             newPoint.y += Math.sin(segAngle) * extraLen;
 
-            // if still too close, push it outward along vector from nearest point
+            // if still too close to ANY existing point, push it outward along vector from nearest point
             if (path.length > 0) {
                 // find nearest existing point
                 let nearestIdx = -1;
@@ -393,13 +393,28 @@
                 const minSep2 = minSeparation * minSeparation;
                 if (nearest2 < minSep2 && nearestIdx >= 0) {
                     const near = path[nearestIdx];
-                    const dx = newPoint.x - near.x || 0.0001;
-                    const dy = newPoint.y - near.y || 0.0001;
-                    const d = Math.sqrt(dx * dx + dy * dy);
-                    const need = (minSeparation - d);
+                    let dx = newPoint.x - near.x;
+                    let dy = newPoint.y - near.y;
+                    let d = Math.sqrt(dx * dx + dy * dy) || 0.0001;
+                    const need = (minSeparation - d) + 2; // small extra gap
                     // nudge along the normalized vector away from the nearest point
                     newPoint.x += (dx / d) * need;
                     newPoint.y += (dy / d) * need;
+                }
+
+                // specifically ensure new word does not overlap the immediately previous word's position
+                // previous word pos is last entry in `path` (if any)
+                const prevIdx = path.length - 1;
+                if (prevIdx >= 0) {
+                    const prev = path[prevIdx];
+                    let pdx = newPoint.x - prev.x;
+                    let pdy = newPoint.y - prev.y;
+                    let pd = Math.sqrt(pdx * pdx + pdy * pdy) || 0.0001;
+                    if (pd < wordSpacing) {
+                        const extra = wordSpacing - pd + 4;
+                        newPoint.x += (pdx / pd) * extra;
+                        newPoint.y += (pdy / pd) * extra;
+                    }
                 }
             }
 
@@ -434,28 +449,39 @@
         /* ---------------- MOTION ---------------- */
         let lastMove = 0;
 
+        // Shake detection: one generated word per distinct shake cycle.
+        // Uses simple hysteresis: enter shake when magnitude > `shakeHigh`,
+        // and complete the shake when magnitude falls below `shakeLow`.
+        let shakeInProgress = false;
+        let lastShakeTime = 0;
+        const shakeHigh = 18; // require a stronger peak to start
+        const shakeLow = 12;  // drop below this to end the shake
+        const minShakeInterval = 600; // ms between completed shakes
+
         function startMotion() {
             window.addEventListener("devicemotion", e => {
-
                 const acc = e.accelerationIncludingGravity;
+                if (!acc) return;
 
-                const magnitude =
-                    Math.abs(acc.x) +
-                    Math.abs(acc.y) +
-                    Math.abs(acc.z);
+                const magnitude = Math.abs(acc.x) + Math.abs(acc.y) + Math.abs(acc.z);
 
-                // 灵敏度阈值（可调）
-                if (magnitude > 15) {
+                const now = Date.now();
 
-                    const now = Date.now();
-
-                    if (now - lastMove > 250) {
+                if (!shakeInProgress) {
+                    // try to enter shake state only on a noticeable peak
+                    if (magnitude >= shakeHigh && (now - lastShakeTime) > minShakeInterval) {
+                        shakeInProgress = true;
+                    }
+                } else {
+                    // when magnitude drops below low threshold, we treat it as one shake
+                    if (magnitude <= shakeLow) {
+                        // complete shake: generate a single step
                         addStep(magnitude);
-                        lastMove = now;
+                        lastShakeTime = now;
+                        shakeInProgress = false;
                     }
                 }
-
-            });
+            }, { passive: true });
         }
 
         function requestPermission() {
