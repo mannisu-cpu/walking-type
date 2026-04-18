@@ -35,7 +35,8 @@
             z-index: 10;
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 12px;
+            flex-wrap: wrap; /* allow controls to wrap to new line on narrow screens */
             background: rgba(0, 0, 0, 0.25);
             padding: 6px 12px;
             border-radius: 20px;
@@ -97,6 +98,19 @@
             transform: translateX(-50%) translateY(-120%);
             opacity: 0;
             pointer-events: none;
+        }
+
+        /* Ensure the spacing slider moves to its own row on small screens */
+        @media (max-width: 520px) {
+            #spacingLabel, #spacingRange {
+                flex-basis: 100%;
+                margin-left: 0 !important;
+                width: auto !important;
+            }
+
+            #ui button {
+                flex: 0 0 auto;
+            }
         }
 
 
