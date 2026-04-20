@@ -284,9 +284,9 @@
             wordIndex = 0; carry = 0; lastPoint = null;
         });
 
-        // save as JPG at higher pixel density (e.g. 150 DPI) to reduce blur
+        // save combined background (processed upload) + path at 300 DPI
         document.getElementById('saveJpgBtn').addEventListener('click', () => {
-            const targetDPI = 150; // desired output DPI
+            const targetDPI = 300; // desired output DPI
             const cssRatio = window.devicePixelRatio || 1;
 
             // CSS pixel dimensions of the canvas (logical size as seen on screen)
@@ -295,8 +295,6 @@
 
             // scale factor from CSS pixels -> target DPI pixels (assumes 96 CSS px/in baseline)
             const dpiScale = targetDPI / 96;
-
-            // final pixel scale includes devicePixelRatio so we preserve canvas fidelity
             const scale = dpiScale * cssRatio;
 
             const outW = Math.round(cssW * scale);
@@ -311,17 +309,44 @@
             octx.fillStyle = window.getComputedStyle(document.body).backgroundColor || '#ffffff';
             octx.fillRect(0, 0, outW, outH);
 
-            // draw the high-resolution image from the drawing canvas into the output canvas
-            // source canvas is already in device pixels (canvas.width/height), so use those as source dims
+            // If a background image is present and visible, draw it with 'cover' behavior
+            const bg = document.getElementById('bgImage');
+            try {
+                if (bg && bg.src && bg.style.display !== 'none' && bg.naturalWidth && bg.naturalHeight) {
+                    const natW = bg.naturalWidth;
+                    const natH = bg.naturalHeight;
+                    const outAspect = outW / outH;
+                    const natAspect = natW / natH;
+
+                    let sx = 0, sy = 0, sWidth = natW, sHeight = natH;
+                    if (natAspect > outAspect) {
+                        // image is wider than target -> crop sides
+                        sWidth = Math.round(natH * outAspect);
+                        sx = Math.round((natW - sWidth) / 2);
+                    } else {
+                        // image is taller -> crop top/bottom
+                        sHeight = Math.round(natW / outAspect);
+                        sy = Math.round((natH - sHeight) / 2);
+                    }
+
+                    octx.imageSmoothingEnabled = true;
+                    octx.imageSmoothingQuality = 'high';
+                    octx.drawImage(bg, sx, sy, sWidth, sHeight, 0, 0, outW, outH);
+                }
+            } catch (err) {
+                console.warn('Could not draw background image into export:', err);
+            }
+
+            // draw the drawing canvas on top at full resolution
             octx.imageSmoothingEnabled = true;
             octx.imageSmoothingQuality = 'high';
             octx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, outW, outH);
 
-            // export as JPEG (use high quality). For lossless output use PNG via out.toDataURL('image/png')
+            // export as JPEG (high quality)
             const data = out.toDataURL('image/jpeg', 0.95);
             const a = document.createElement('a');
             a.href = data;
-            a.download = 'trace.jpg';
+            a.download = 'trace-combined.jpg';
             document.body.appendChild(a);
             a.click();
             a.remove();
