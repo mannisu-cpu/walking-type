@@ -284,19 +284,40 @@
             wordIndex = 0; carry = 0; lastPoint = null;
         });
 
-        // save as JPG
+        // save as JPG at higher pixel density (e.g. 150 DPI) to reduce blur
         document.getElementById('saveJpgBtn').addEventListener('click', () => {
-            const ratio = window.devicePixelRatio || 1;
-            const w = Math.floor(canvas.width / ratio);
-            const h = Math.floor(canvas.height / ratio);
+            const targetDPI = 150; // desired output DPI
+            const cssRatio = window.devicePixelRatio || 1;
+
+            // CSS pixel dimensions of the canvas (logical size as seen on screen)
+            const cssW = Math.floor(canvas.width / cssRatio);
+            const cssH = Math.floor(canvas.height / cssRatio);
+
+            // scale factor from CSS pixels -> target DPI pixels (assumes 96 CSS px/in baseline)
+            const dpiScale = targetDPI / 96;
+
+            // final pixel scale includes devicePixelRatio so we preserve canvas fidelity
+            const scale = dpiScale * cssRatio;
+
+            const outW = Math.round(cssW * scale);
+            const outH = Math.round(cssH * scale);
+
             const out = document.createElement('canvas');
-            out.width = w; out.height = h;
+            out.width = outW;
+            out.height = outH;
             const octx = out.getContext('2d');
+
             // fill background (match page background)
             octx.fillStyle = window.getComputedStyle(document.body).backgroundColor || '#ffffff';
-            octx.fillRect(0, 0, w, h);
-            // draw the drawing canvas into output canvas
-            octx.drawImage(canvas, 0, 0, w, h);
+            octx.fillRect(0, 0, outW, outH);
+
+            // draw the high-resolution image from the drawing canvas into the output canvas
+            // source canvas is already in device pixels (canvas.width/height), so use those as source dims
+            octx.imageSmoothingEnabled = true;
+            octx.imageSmoothingQuality = 'high';
+            octx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, outW, outH);
+
+            // export as JPEG (use high quality). For lossless output use PNG via out.toDataURL('image/png')
             const data = out.toDataURL('image/jpeg', 0.95);
             const a = document.createElement('a');
             a.href = data;
