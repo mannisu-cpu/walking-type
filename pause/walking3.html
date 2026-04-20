@@ -253,8 +253,10 @@
         let lastPoint = { x: canvas.width / 2, y: canvas.height / 2 };
 
         /* ---------------- CONFIG ---------------- */
-        const stepSize = 12;
-        const wordSpacing = 25;
+        // step length will be chosen randomly between these (px)
+        const stepMin = 80;
+        const stepMax = 200;
+        const wordSpacing = 30;
 
         /* ---------------- WORDS ---------------- */
         const vocab = [
@@ -284,8 +286,9 @@
 
             ctx.strokeStyle = "yellow";
             ctx.lineWidth = 4;
-            ctx.linelength = "30";
-            ctx.lineap = "round";
+            ctx.linelength = "300px";
+            ctx.lineJoin = "round";
+            ctx.lineCap = "round";
             ctx.shadowBlur = 0;
             ctx.shadowColor = "transparent";
 
@@ -331,7 +334,9 @@
             // `minSeparation` away from any existing path point. If all attempts fail,
             // we'll accept the best candidate and nudge it outward.
 
-            const minSeparation = Math.max(22, stepSize * 1.6); // px between footprints
+            // choose a random step length for this new segment
+            const step = Math.round(stepMin + Math.random() * (stepMax - stepMin));
+            const minSeparation = Math.max(22, Math.round(step * 0.6)); // px between footprints
             const maxAttempts = 14;
 
             function dist2(a, b) {
@@ -347,8 +352,8 @@
             for (let attempt = 0; attempt < maxAttempts; attempt++) {
                 const angle = Math.random() * Math.PI * 2;
                 const candidate = {
-                    x: lastPoint.x + Math.cos(angle) * stepSize,
-                    y: lastPoint.y + Math.sin(angle) * stepSize
+                    x: lastPoint.x + Math.cos(angle) * step,
+                    y: lastPoint.y + Math.sin(angle) * step
                 };
 
                 // compute nearest distance squared to existing path points
@@ -374,12 +379,13 @@
             }
 
             let newPoint = bestPoint || {
-                x: lastPoint.x + stepSize,
+                x: lastPoint.x + step,
                 y: lastPoint.y
             };
 
             // extend the segment a bit so each yellow segment is visually longer
-            const extraLen = Math.max(8, Math.round(stepSize * 0.9));
+            // add a small forward extension so segments read clearly (10% of step)
+            const extraLen = Math.max(8, Math.round(step * 0.1));
             const segAngle = bestAngle || Math.atan2(newPoint.y - lastPoint.y, newPoint.x - lastPoint.x);
             newPoint.x += Math.cos(segAngle) * extraLen;
             newPoint.y += Math.sin(segAngle) * extraLen;
