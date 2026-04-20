@@ -195,6 +195,7 @@
     <div id="ui">
         <button onclick="requestPermission()">GO</button>
         <button onclick="replay()">Read My Path</button>
+        <button onclick="formatReplay()">Format Paragraph</button>
         <button id="gpsBtn" onclick="toggleGPS()">Use GPS</button>
         <button onclick="savePath()">Save My Path</button>
         <span id="status">waiting...</span>
@@ -490,6 +491,68 @@
             let text = words.slice(1).join(" ");
             document.getElementById("text").innerText =
                 "REPLAY TEXT:\n\n" + text;
+        }
+
+        // Heuristic formatter: turn generated word list into readable paragraph(s)
+        function formatReplay() {
+            if (words.length < 2) return;
+            const raw = words.slice(1).map(w => (w || '').toString().trim()).filter(Boolean);
+
+            // small lexical lists to guide simple grammar heuristics
+            const verbs = new Set([
+                'walk','trace','press','knead','imprint','erase','leave','tread','drift',
+                'remember','forget','wander','explore','return','arrive','mark','leave','go','come'
+            ]);
+            const preps = ['in','on','to','from','across','along','through','between','under','over','towards','beyond','by','with','for','from'];
+            const determiners = ['the','a','an','this','that','these','those','my','our','their'];
+
+            const sentences = [];
+            let i = 0;
+            while (i < raw.length) {
+                // sentence length 8-14 words
+                const remain = raw.length - i;
+                const len = Math.min(remain, 8 + Math.floor(Math.random() * 7));
+                const segment = raw.slice(i, i + len);
+
+                // insert prepositions between adjacent noun-like tokens sometimes
+                const tokens = [];
+                for (let j = 0; j < segment.length; j++) {
+                    const cur = segment[j];
+                    tokens.push(cur);
+                    if (j < segment.length - 1) {
+                        const a = (segment[j] || '').toLowerCase();
+                        const b = (segment[j + 1] || '').toLowerCase();
+                        const aIsVerb = verbs.has(a);
+                        const bIsVerb = verbs.has(b);
+                        const aIsDet = determiners.indexOf(a) >= 0;
+                        const bIsDet = determiners.indexOf(b) >= 0;
+                        const bIsPrep = preps.indexOf(b) >= 0;
+
+                        if (!aIsVerb && !bIsVerb && !aIsDet && !bIsDet && !bIsPrep) {
+                            // 40% chance to insert a preposition to make phrases readable
+                            if (Math.random() < 0.4) tokens.push(preps[Math.floor(Math.random() * preps.length)]);
+                        }
+                    }
+                }
+
+                // ensure subject at sentence start if it begins with a verb
+                const firstLower = (tokens[0] || '').toLowerCase();
+                if (verbs.has(firstLower)) tokens.unshift('I');
+
+                // Capitalize first token
+                if (tokens.length > 0) tokens[0] = tokens[0].charAt(0).toUpperCase() + tokens[0].slice(1);
+
+                // join and finalize sentence
+                let sentence = tokens.join(' ');
+                sentence = sentence.replace(/\s+([.,!?])/g, '$1'); // tighten spaces before punctuation
+                if (!/[.!?]$/.test(sentence)) sentence += '.';
+
+                sentences.push(sentence);
+                i += len;
+            }
+
+            const paragraph = sentences.join(' ');
+            document.getElementById('text').innerText = paragraph;
         }
 
         // Export the entire path workspace as a JPEG (captures whole canvas/path bounds)
