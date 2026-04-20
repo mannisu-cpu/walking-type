@@ -492,26 +492,97 @@
                 "REPLAY TEXT:\n\n" + text;
         }
 
-        // Export current canvas as a JPEG and trigger download
+        // Export the entire path workspace as a JPEG (captures whole canvas/path bounds)
         function savePath() {
-            // create an export canvas to ensure a solid black background for JPEG
+            if (!path || path.length === 0) {
+                // nothing to save; fallback to visible canvas
+                const exportCanvas = document.createElement('canvas');
+                exportCanvas.width = canvas.width;
+                exportCanvas.height = canvas.height;
+                const ectx = exportCanvas.getContext('2d');
+                ectx.fillStyle = 'black';
+                ectx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+                ectx.drawImage(canvas, 0, 0);
+                const data = exportCanvas.toDataURL('image/jpeg', 0.92);
+                const a = document.createElement('a'); a.href = data; a.download = `walking-path-${Date.now()}.jpg`; document.body.appendChild(a); a.click(); a.remove();
+                return;
+            }
+
+            // compute bounding box of all path points
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            for (let i = 0; i < path.length; i++) {
+                const p = path[i];
+                if (p.x < minX) minX = p.x;
+                if (p.y < minY) minY = p.y;
+                if (p.x > maxX) maxX = p.x;
+                if (p.y > maxY) maxY = p.y;
+            }
+
+            const padding = 48; // px padding around the drawing
+            minX -= padding; minY -= padding; maxX += padding; maxY += padding;
+
+            const outW = Math.max(1, Math.round(maxX - minX));
+            const outH = Math.max(1, Math.round(maxY - minY));
+
+            // account for device pixel ratio for crisper output
+            const scale = window.devicePixelRatio || 1;
             const exportCanvas = document.createElement('canvas');
-            exportCanvas.width = canvas.width;
-            exportCanvas.height = canvas.height;
+            exportCanvas.width = Math.round(outW * scale);
+            exportCanvas.height = Math.round(outH * scale);
+            exportCanvas.style.width = outW + 'px';
+            exportCanvas.style.height = outH + 'px';
+
             const ectx = exportCanvas.getContext('2d');
+            ectx.scale(scale, scale);
 
             // fill background black
             ectx.fillStyle = 'black';
-            ectx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+            ectx.fillRect(0, 0, outW, outH);
 
-            // draw current canvas on top
-            ectx.drawImage(canvas, 0, 0);
+            // draw the path translated so bounding box aligns to (0,0)
+            ectx.save();
+            ectx.translate(-minX, -minY);
 
-            // get JPEG data and download
+            // draw yellow path
+            ectx.strokeStyle = 'yellow';
+            ectx.lineWidth = 4;
+            ectx.lineJoin = 'round';
+            ectx.lineCap = 'round';
+            ectx.beginPath();
+            path.forEach((p, i) => {
+                if (i === 0) ectx.moveTo(p.x, p.y);
+                else ectx.lineTo(p.x, p.y);
+            });
+            ectx.stroke();
+
+            // draw words positioned at segment endpoints (same logic as draw())
+            ectx.fillStyle = 'white';
+            ectx.font = '24px MyCustomFont';
+            ectx.textBaseline = 'middle';
+            for (let i = 1; i < path.length; i++) {
+                const p = path[i];
+                const prev = path[i - 1];
+                const w = words[i] || '';
+                if (!w) continue;
+                const angle = Math.atan2(p.y - prev.y, p.x - prev.x);
+                const forwardOffset = 50; // keep same visual offset
+                const mx = p.x + Math.cos(angle) * forwardOffset;
+                const my = p.y + Math.sin(angle) * forwardOffset;
+
+                ectx.save();
+                ectx.translate(mx, my);
+                ectx.rotate(angle);
+                ectx.fillText(w, 0, 0);
+                ectx.restore();
+            }
+
+            ectx.restore();
+
+            // export
             const data = exportCanvas.toDataURL('image/jpeg', 0.92);
             const a = document.createElement('a');
             a.href = data;
-            a.download = `walking-path-${Date.now()}.jpg`;
+            a.download = `walking-path-full-${Date.now()}.jpg`;
             document.body.appendChild(a);
             a.click();
             a.remove();
