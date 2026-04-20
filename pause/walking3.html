@@ -58,7 +58,8 @@
 
         /* compact UI on narrow screens so buttons wrap instead of being clipped */
         @media (max-width: 480px) {
-            #ui { gap: 8px; padding: 6px 8px; left: 8px; transform: none; top: 10px; }
+            /* move the UI slightly right so the left toggle button doesn't overlap */
+            #ui { gap: 8px; padding: 6px 8px; left: 56px; transform: none; top: 10px; }
             #ui button { padding: 6px 8px; font-size: 12pt; }
             #ui.hidden { transform: translateY(-120%); }
         }
